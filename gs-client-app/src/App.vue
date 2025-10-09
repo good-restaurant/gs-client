@@ -1,85 +1,103 @@
-<script setup>
-import { RouterLink, RouterView } from 'vue-router'
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <q-layout view="lHh Lpr lFf">
+    <!-- 헤더 -->
+    <q-header elevated class="bg-white text-dark">
+      <q-toolbar>
+        <!-- 모바일에서만 보이는 메뉴 버튼 -->
+        <q-btn v-if="$q.screen.lt.md" flat dense round icon="menu" aria-label="메뉴 열기" @click="toggleLeftDrawer" />
+        <!-- 타이틀(클릭 시 홈) -->
+        <q-toolbar-title class="cursor-pointer" @click="goHome">
+          🍽️ GoodRestaurant
+        </q-toolbar-title>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
+        <q-space />
 
-      <nav>
-        <RouterLink to="/">Home</RouterLink>
-        <RouterLink to="/about">About</RouterLink>
-      </nav>
-    </div>
-  </header>
+        <!-- 데스크톱 상단 네비게이션 -->
+        <div class="gt-sm q-gutter-sm">
+          <q-btn flat icon="home" label="홈" :to="{ name: 'home' }" />
+          <q-btn flat icon="restaurant" label="맛집 목록" :to="{ name: 'restaurants' }" />
+          <q-btn flat icon="info" label="소개" :to="{ name: 'about' }" />
+          <q-btn flat icon="map" label="지도 보기" :to="{ name: 'map' }" />
+        </div>
 
-  <RouterView />
+        <q-separator vertical spaced class="gt-sm" />
+
+        <!-- 다크모드 토글 -->
+        <q-btn round dense :icon="dark ? 'dark_mode' : 'light_mode'" @click="dark = !dark" aria-label="테마 전환">
+          <q-tooltip>{{ dark ? '다크 모드' : '라이트 모드' }}</q-tooltip>
+        </q-btn>
+      </q-toolbar>
+    </q-header>
+
+    <!-- 좌측 드로어(모바일 기본 닫힘, 데스크톱 기본 열림) -->
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="260">
+      <q-list padding>
+        <q-item-label header class="text-grey-7">메뉴</q-item-label>
+
+        <q-item v-for="it in navs" :key="it.name" :to="{ name: it.name }" clickable v-ripple
+          :active="route.name === it.name" active-class="bg-primary text-white">
+          <q-item-section avatar><q-icon :name="it.icon" /></q-item-section>
+          <q-item-section>{{ it.label }}</q-item-section>
+        </q-item>
+      </q-list>
+    </q-drawer>
+
+    <!-- 라우트가 그려질 영역 -->
+    <q-page-container>
+      <RouterView />
+    </q-page-container>
+
+    <!-- 푸터 -->
+    <q-footer class="bg-grey-1 text-grey-7">
+      <div class="q-pa-sm flex items-center justify-between">
+        <div>© {{ year }} GoodRestaurant</div>
+        <div class="text-caption">v{{ appVersion }}</div>
+      </div>
+    </q-footer>
+
+    <!-- 맨 위로 이동 버튼 -->
+    <q-page-sticky position="bottom-right" :offset="[18, 18]">
+      <q-btn round color="primary" icon="keyboard_arrow_up" @click="scrollToTop" />
+    </q-page-sticky>
+  </q-layout>
 </template>
 
+<script setup>
+import { ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
+
+// 드로어: 데스크톱(>=md) 기본 열림, 모바일 기본 닫힘
+const leftDrawerOpen = ref($q.screen.gt.sm)
+const toggleLeftDrawer = () => (leftDrawerOpen.value = !leftDrawerOpen.value)
+const goHome = () => router.push({ name: 'home' })
+
+// 다크 모드 토글
+const dark = ref($q.dark.isActive)
+watch(dark, v => $q.dark.set(v))
+
+// 네비게이션 정의 (라우트 name과 반드시 일치하게)
+const navs = [
+  { name: 'home', label: '홈', icon: 'home' },
+  { name: 'restaurants', label: '맛집 목록', icon: 'restaurant' },
+  { name: 'map', label: '지도 보기', icon: 'map' },
+  { name: 'about', label: '소개', icon: 'info' }
+]
+
+// 표기용
+const year = new Date().getFullYear()
+const appVersion = import.meta.env.VITE_APP_VERSION ?? 'dev'
+
+// 유틸
+const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
+</script>
+
 <style scoped>
-header {
-  line-height: 1.5;
-  max-height: 100vh;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-nav {
-  width: 100%;
-  font-size: 12px;
-  text-align: center;
-  margin-top: 2rem;
-}
-
-nav a.router-link-exact-active {
-  color: var(--color-text);
-}
-
-nav a.router-link-exact-active:hover {
-  background-color: transparent;
-}
-
-nav a {
-  display: inline-block;
-  padding: 0 1rem;
-  border-left: 1px solid var(--color-border);
-}
-
-nav a:first-of-type {
-  border: 0;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  nav {
-    text-align: left;
-    margin-left: -1rem;
-    font-size: 1rem;
-
-    padding: 1rem 0;
-    margin-top: 1rem;
-  }
+.cursor-pointer {
+  cursor: pointer;
 }
 </style>
