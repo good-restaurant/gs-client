@@ -11,7 +11,7 @@ onMounted(() => {
     const clientId = import.meta.env.VITE_NAVER_CLIENT_ID
     if (!window.naver) {
         const script = document.createElement('script')
-        script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}`
+        script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`
         script.async = true
         script.onload = initMap
         document.head.appendChild(script)
