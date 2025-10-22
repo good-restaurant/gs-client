@@ -144,3 +144,7 @@ vite.config.ts.timestamp-*
 *.key
 *.p12
 *.csr
+/.idea/gs-client.iml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/vcs.xml
