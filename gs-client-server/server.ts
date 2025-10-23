@@ -3,15 +3,40 @@ import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import * as fs from 'node:fs';
+import * as https from 'node:https';
 import { join } from 'node:path';
 
 dotenv.config();
 
 const app = express();
 const PORT: number = Number.parseInt(process.env.PORT || '3000', 10);
+const USE_HTTPS: boolean = process.env.USE_HTTPS === 'true';
 
 // Vite 빌드된 정적 파일 경로
 const DIST_PATH = join(__dirname, '../client');
+
+// HTTPS 설정 (개발용 자체 서명 인증서)
+let httpsOptions: https.ServerOptions | undefined;
+if (USE_HTTPS) {
+  try {
+    // 기존 인증서 파일이 있는지 확인
+    const keyPath = join(__dirname, '../../gs-client-app/dev-naver.i4624.info-key.pem');
+    const certPath = join(__dirname, '../../gs-client-app/dev-naver.i4624.info.pem');
+    
+    if (fs.existsSync(keyPath) && fs.existsSync(certPath)) {
+      httpsOptions = {
+        key: fs.readFileSync(keyPath),
+        cert: fs.readFileSync(certPath)
+      };
+      console.log('🔒 HTTPS 인증서를 사용합니다.');
+    } else {
+      console.log('⚠️  HTTPS 인증서 파일을 찾을 수 없습니다. HTTP로 실행됩니다.');
+    }
+  } catch (error) {
+    console.log('⚠️  HTTPS 설정 중 오류가 발생했습니다. HTTP로 실행됩니다.');
+  }
+}
 
 // 미들웨어
 app.use(helmet({
@@ -56,6 +81,15 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`API Server running on port ${PORT}`);
-});
+// 서버 시작
+if (USE_HTTPS && httpsOptions) {
+  https.createServer(httpsOptions, app).listen(PORT, '0.0.0.0', () => {
+    console.log(`🔒 HTTPS Server running on https://localhost:${PORT}`);
+    console.log(`🔒 HTTPS Server running on https://0.0.0.0:${PORT}`);
+  });
+} else {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 HTTP Server running on http://localhost:${PORT}`);
+    console.log(`🌐 HTTP Server running on http://0.0.0.0:${PORT}`);
+  });
+}
