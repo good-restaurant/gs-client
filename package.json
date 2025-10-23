@@ -13,7 +13,6 @@
     "dev": "concurrently \"npm run dev:app\" \"npm run dev:server\"",
     "build:app": "cd gs-client-app && npm run build",
     "build:server": "cd gs-client-server && npm run build",
-    "build:server:clean": "cd gs-client-server && npm run build && cd .. && npm run clean && npm run build",
     "build": "npm run build:app && npm run build:server",
     "start": "node dist/server/server.js",
     "start:https": "cross-env USE_HTTPS=true node dist/server/server.js",

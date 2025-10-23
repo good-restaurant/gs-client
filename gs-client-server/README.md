@@ -4,7 +4,7 @@ Vite로 빌드된 Vue.js 애플리케이션을 서빙하는 Express 서버입니
 
 ## 프로젝트 구조
 
-```
+```bash
 gs-client/
 ├── gs-client-app/          # Vue.js + Vite 애플리케이션
 │   ├── src/
@@ -18,55 +18,41 @@ gs-client/
 
 ## 개발 워크플로우
 
-### 1. 개발 모드 (개별 실행)
+### 1. 개발 모드
 
-**클라이언트 개발:**
 ```bash
-cd gs-client-app
-npm run dev
-```
-
-**서버 개발:**
-```bash
+# 서버 빌드 및 실행
 cd gs-client-server
 npm run dev
 ```
 
-### 2. 프로덕션 빌드 및 배포
+### 2. 자체 빌드 및 배포
 
-**전체 빌드 및 실행:**
 ```bash
+# 서버 빌드 및 실행
 cd gs-client-server
 npm run deploy
 ```
 
-이 명령어는 다음을 순차적으로 실행합니다:
-1. `npm run build:client` - Vue.js 앱 빌드
-2. `npm run build` - TypeScript 서버 컴파일
-3. `npm start` - 서버 실행
+이 명령어는 다음을 순차적으로 실행합니다
 
-**개별 빌드:**
+1. `npm run build` - TypeScript 서버 컴파일
+2. `npm start` - 서버 실행
+
+> 프로젝트 루트가 아닌 server 패키지 자체에서 실행하는 것이므로, `gs-client-server/dist` 에 있는 파일을 다루게 됩니다.
+
 ```bash
-# 클라이언트만 빌드
-npm run build:client
-
 # 서버만 빌드
 npm run build
 
-# 클라이언트 + 서버 빌드
-npm run build:all
+# 서버 실행
+npm start
 ```
 
 ## 서버 기능
 
-- **정적 파일 서빙**: `gs-client-app/dist` 폴더의 빌드된 파일들을 서빙
-- **SPA 라우팅**: 모든 라우트를 `index.html`로 fallback하여 Vue Router 지원
-- **API 엔드포인트**: 
-  - `GET /health` - 서버 상태 확인
-  - `GET /api/restaurants` - 레스토랑 목록
-  - `GET /api/restaurants/:id` - 특정 레스토랑 정보
-- **보안**: Helmet, CORS 설정
-- **로깅**: Morgan을 통한 요청 로깅
+- 정적 파일 서빙: `../client` 폴더의 빌드된 파일들을 서빙
+- SPA 라우팅: 모든 라우트를 `index.html`로 fallback하여 Vue Router 지원
 
 ## 포트 설정
 
@@ -75,6 +61,4 @@ npm run build:all
 
 ## 배포 시 주의사항
 
-1. `gs-client-app`에서 `npm run build`를 실행하여 `dist` 폴더가 생성되어야 함
-2. 서버는 `gs-client-app/dist` 폴더의 파일들을 서빙함
-3. SPA이므로 모든 라우트가 `index.html`로 fallback됨
+1. `gs-client-app`에서 `npm run build`를 실행하여 프로젝트 루트에 `dist` 폴더가 생성되어야 함
