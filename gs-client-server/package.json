@@ -2,12 +2,15 @@
   "name": "gs-api-server",
   "version": "1.0.0",
   "description": "GoodRestaurant API Server",
-  "main": "dist/server.ts",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/server.ts",
+    "start": "node dist/server.js",
     "dev": "nodemon --exec ts-node server.ts",
     "build": "tsc",
-    "build:watch": "tsc --watch"
+    "build:watch": "tsc --watch",
+    "build:client": "cd ../gs-client-app && npm run build",
+    "build:all": "npm run build:client && npm run build",
+    "deploy": "npm run build:all && npm start"
   },
   "dependencies": {
     "express": "^4.18.2",

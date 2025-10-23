@@ -3,15 +3,15 @@ import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import path from 'path';
+import { join } from 'node:path';
 
 dotenv.config();
 
 const app = express();
-const PORT: number = parseInt(process.env.PORT || '3000', 10);
+const PORT: number = Number.parseInt(process.env.PORT || '3000', 10);
 
 // Vite 빌드된 정적 파일 경로
-const DIST_PATH = path.join(__dirname, '../gs-client-app/dist');
+const DIST_PATH = join(__dirname, '../client');
 
 // 미들웨어
 app.use(helmet({
@@ -42,12 +42,12 @@ app.get('/api/restaurants', (req: Request, res: Response) => {
 app.get('/api/restaurants/:id', (req: Request, res: Response) => {
   const { id } = req.params;
   // 실제로는 데이터베이스에서 조회
-  res.json({ id: parseInt(id), name: '맛있는 식당', address: '서울시 강남구' });
+  res.json({ id: Number.parseInt(id), name: '맛있는 식당', address: '서울시 강남구' });
 });
 
 // SPA 라우팅을 위한 fallback (모든 라우트를 index.html로 리다이렉트)
 app.get('*', (req: Request, res: Response) => {
-  res.sendFile(path.join(DIST_PATH, 'index.html'));
+  res.sendFile(join(DIST_PATH, 'index.html'));
 });
 
 // 에러 핸들러
