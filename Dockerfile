@@ -85,10 +85,13 @@ COPY --from=app-build /app/dist ./dist/client
 # Copy built server from server-build stage
 COPY --from=server-build /app/dist ./dist/server
 
-# Production stage
-FROM node:24 AS production
+# Production stage - Use Alpine for smaller image
+FROM node:24-alpine AS production
 
 WORKDIR /app
+
+# Install dumb-init for proper signal handling
+RUN apk add --no-cache dumb-init
 
 # Copy root package files
 COPY package*.json ./
@@ -112,5 +115,6 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
-# Start the application
+# Start the application with dumb-init
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "run", "start:https"]
