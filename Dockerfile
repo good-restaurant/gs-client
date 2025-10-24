@@ -29,6 +29,12 @@ COPY package*.json ./
 COPY gs-client-app/package*.json ./gs-client-app/
 COPY gs-client-server/package*.json ./gs-client-server/
 
+# Clean npm cache and install dependencies
+RUN npm cache clean --force
+RUN rm -rf node_modules package-lock.json
+RUN rm -rf gs-client-app/node_modules gs-client-app/package-lock.json
+RUN rm -rf gs-client-server/node_modules gs-client-server/package-lock.json
+
 # Install all dependencies (including dev dependencies)
 RUN npm install
 
