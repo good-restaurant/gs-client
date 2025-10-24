@@ -36,7 +36,7 @@ npm run install:all
 # 프론트엔드만 개발
 npm run dev:app
 
-# 백엔드만 개발  
+# 백엔드만 개발
 npm run dev:server
 
 # 프론트엔드 + 백엔드 동시 개발
@@ -93,7 +93,7 @@ npm run deploy:https
 ### 주의사항
 
 vite 개발 환경에서 HTTPS를 사용하려면 `gs-client-app` 폴더에 다음 인증서 파일이 필요합니다.
-express에서는 상관없음.
+express에서는 상관없음. (mkcert 모듈을 알아서 함. 아마도?)
 
 - `dev-naver.i4624.info-key.pem` (개인키)
 - `dev-naver.i4624.info.pem` (인증서)
