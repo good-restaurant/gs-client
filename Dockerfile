@@ -29,9 +29,6 @@ COPY package*.json ./
 COPY gs-client-app/package*.json ./gs-client-app/
 COPY gs-client-server/package*.json ./gs-client-server/
 
-# Clean any existing node_modules and package-lock files
-RUN rm -rf node_modules package-lock.json gs-client-app/node_modules gs-client-app/package-lock.json gs-client-server/node_modules gs-client-server/package-lock.json
-
 # Install all dependencies (including dev dependencies)
 RUN npm install
 
@@ -56,7 +53,6 @@ RUN npm ci --only=production && npm cache clean --force
 
 # Copy built application from build stage
 COPY --from=build /app/dist ./dist
-COPY --from=build /app/gs-client-app/dist ./gs-client-app/dist
 
 # Create non-root user
 RUN groupadd -g 1001 nodejs
