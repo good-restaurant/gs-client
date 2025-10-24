@@ -6,6 +6,8 @@ import morgan from 'morgan';
 import * as fs from 'node:fs';
 import * as https from 'node:https';
 import { join } from 'node:path';
+// @ts-ignore
+import selfsigned from 'selfsigned';
 
 dotenv.config();
 
@@ -15,6 +17,37 @@ const USE_HTTPS: boolean = process.env.USE_HTTPS === 'true';
 
 // Vite 빌드된 정적 파일 경로
 const DIST_PATH = join(__dirname, '../client');
+
+// 자체 서명 인증서 생성 함수 (selfsigned 패키지 사용)
+function generateSelfSignedCert(): { key: string; cert: string } {
+  try {
+    // selfsigned 패키지를 사용하여 올바른 X.509 인증서 생성
+    const attrs = [
+      { name: 'commonName', value: 'localhost' },
+      { name: 'countryName', value: 'KR' },
+      { name: 'stateOrProvinceName', value: 'Seoul' },
+      { name: 'localityName', value: 'Seoul' },
+      { name: 'organizationName', value: 'Dev' },
+      { name: 'organizationalUnitName', value: 'IT' }
+    ];
+    
+    const pems = selfsigned.generate(attrs, {
+      keySize: 2048,
+      days: 365,
+      algorithm: 'sha256'
+    });
+    
+    console.log('🔒 selfsigned 패키지로 자체 서명 인증서가 생성되었습니다.');
+    
+    return {
+      key: pems.private,
+      cert: pems.cert
+    };
+  } catch (error) {
+    console.error('❌ 자체 서명 인증서 생성 실패:', error);
+    throw error;
+  }
+}
 
 // HTTPS 설정 (개발용 자체 서명 인증서)
 let httpsOptions: https.ServerOptions | undefined;
@@ -29,12 +62,18 @@ if (USE_HTTPS) {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath)
       };
-      console.log('🔒 HTTPS 인증서를 사용합니다.');
+      console.log('🔒 기존 HTTPS 인증서를 사용합니다.');
     } else {
-      console.log('⚠️  HTTPS 인증서 파일을 찾을 수 없습니다. HTTP로 실행됩니다.');
+      console.log('⚠️  기존 HTTPS 인증서 파일을 찾을 수 없습니다. 자체 서명 인증서를 생성합니다.');
+      const selfSignedCert = generateSelfSignedCert();
+      httpsOptions = {
+        key: selfSignedCert.key,
+        cert: selfSignedCert.cert
+      };
     }
   } catch (error) {
     console.log('⚠️  HTTPS 설정 중 오류가 발생했습니다. HTTP로 실행됩니다.');
+    console.error('HTTPS 설정 오류:', error);
   }
 }
 
@@ -70,6 +109,15 @@ app.get('/api/restaurants/:id', (req: Request, res: Response) => {
   res.json({ id: Number.parseInt(id), name: '맛있는 식당', address: '서울시 강남구' });
 });
 
+// 환경변수 주입을 위한 API 엔드포인트
+app.get('/api/env', (req: Request, res: Response) => {
+  res.json({
+    VITE_NAVER_CLIENT_ID: process.env.VITE_NAVER_CLIENT_ID,
+    VITE_APP_VERSION: process.env.VITE_APP_VERSION,
+    NODE_ENV: process.env.NODE_ENV
+  });
+});
+
 // SPA 라우팅을 위한 fallback (모든 라우트를 index.html로 리다이렉트)
 app.get('*', (req: Request, res: Response) => {
   res.sendFile(join(DIST_PATH, 'index.html'));
@@ -93,3 +141,4 @@ if (USE_HTTPS && httpsOptions) {
     console.log(`🌐 HTTP Server running on http://0.0.0.0:${PORT}`);
   });
 }
+
