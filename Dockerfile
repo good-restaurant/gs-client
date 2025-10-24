@@ -83,7 +83,7 @@ RUN npm ci
 COPY --from=app-build /app/dist/client ./dist/client
 
 # Copy built server from server-build stage (tsc builds to ../dist/server from gs-client-server)
-COPY --from=server-build /app/dist/server ./dist
+COPY --from=server-build /app/dist/server ./dist/server
 
 # Production stage - Use Alpine for smaller image
 FROM node:24-alpine AS production
