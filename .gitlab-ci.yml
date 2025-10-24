@@ -85,12 +85,44 @@ deploy:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
 
-    # 런타임 env 파일 생성 (필요한 환경변수들)
+    # 런타임 env 파일 생성 (GitLab Variables 사용)
     - |
+      echo "Creating .env.runtime file with GitLab Variables..."
       printf "NODE_ENV=production\nUSE_HTTPS=true\n" > .env.runtime
-      # 추가 환경변수가 필요하면 여기에 추가
-      # printf "DATABASE_URL=%s\nAPI_KEY=%s\n" \
-      #   "$DATABASE_URL" "$API_KEY" >> .env.runtime
+      
+      # GitLab Variables에서 환경변수 주입
+      echo "Checking for GitLab Variables..."
+      if [ -n "$API_URL" ]; then
+        echo "API_URL found, adding to .env.runtime"
+        printf "API_URL=%s\n" "$API_URL" >> .env.runtime
+      else
+        echo "API_URL not set"
+      fi
+      
+      if [ -n "$VITE_NAVER_CLIENT_ID" ]; then
+        echo "VITE_NAVER_CLIENT_ID found, adding to .env.runtime"
+        printf "VITE_NAVER_CLIENT_ID=%s\n" "$VITE_NAVER_CLIENT_ID" >> .env.runtime
+      else
+        echo "VITE_NAVER_CLIENT_ID not set"
+      fi
+      
+      if [ -n "$VITE_NAVER_SECRET" ]; then
+        echo "VITE_NAVER_SECRET found, adding to .env.runtime"
+        printf "VITE_NAVER_SECRET=%s\n" "$VITE_NAVER_SECRET" >> .env.runtime
+      else
+        echo "VITE_NAVER_SECRET not set"
+      fi
+      
+      if [ -n "$PORT" ]; then
+        echo "PORT found, adding to .env.runtime"
+        printf "PORT=%s\n" "$PORT" >> .env.runtime
+      else
+        echo "PORT not set, using default 3000"
+      fi
+      
+      # 생성된 .env.runtime 파일 내용 확인 (민감한 정보는 마스킹)
+      echo "Generated .env.runtime file:"
+      cat .env.runtime | sed 's/=.*/=***MASKED***/'
 
     # 이미지 override + build 제거
     - |
@@ -108,6 +140,12 @@ deploy:
           ports:
             - "3000:3000"
           restart: unless-stopped
+          healthcheck:
+            test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+            start_period: 40s
       YAML
     - sed -i "s|IMAGE_PLACEHOLDER|$CI_REGISTRY_IMAGE:$IMAGE_TAG|g" compose.ci.yaml
 
