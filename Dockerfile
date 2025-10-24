@@ -83,7 +83,7 @@ RUN npm ci
 COPY --from=app-build /app/dist ./dist/client
 
 # Copy built server from server-build stage
-COPY --from=server-build /app/dist ./dist/server
+COPY --from=server-build /app/dist ./dist
 
 # Production stage - Use Alpine for smaller image
 FROM node:24-alpine AS production
