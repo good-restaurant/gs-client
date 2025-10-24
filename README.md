@@ -99,3 +99,19 @@ express에서는 상관없음. (mkcert 모듈을 알아서 함. 아마도?)
 - `dev-naver.i4624.info.pem` (인증서)
 
 mkcert 혹은 기타 셀프 사인 인증서 등을 사용할 수 있습니다.
+
+## Network Flow
+
+- only Deploy Operation
+
+```mermaid
+sequenceDiagram
+    participant Internet
+    participant nginx_443 as nginx 443
+    participant bridge as docker bridge network
+    participant app_3000 as app 3000 express https server
+    Internet ->> nginx_443: HTTPS Request
+    nginx_443 ->> app_3000: HTTP Request
+    app_3000 -->> nginx_443: HTTP Response
+    nginx_443 -->> Internet: HTTPS Response
+```
