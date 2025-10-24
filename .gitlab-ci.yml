@@ -86,6 +86,6 @@ deploy:
     - docker compose -f docker-compose.yml -f compose.ci.yaml up -d
     - docker compose ps
 
-  rules:
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    - if: '$CI_COMMIT_BRANCH == "feat/express-initialize"'
+  # rules:
+  #   - if: '$CI_COMMIT_BRANCH == "main"'
+  #   - if: '$CI_COMMIT_BRANCH == "feat/express-initialize"'

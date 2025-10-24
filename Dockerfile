@@ -1,5 +1,5 @@
 # Multi-stage build for Node.js application
-FROM node:22-alpine AS base
+FROM node:22-slim AS base
 
 # Set working directory
 WORKDIR /app
@@ -13,7 +13,14 @@ COPY gs-client-server/package*.json ./gs-client-server/
 RUN npm ci --only=production
 
 # Build stage
-FROM node:22-alpine AS build
+FROM node:22-slim AS build
+
+# Install build dependencies for native modules
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -22,8 +29,11 @@ COPY package*.json ./
 COPY gs-client-app/package*.json ./gs-client-app/
 COPY gs-client-server/package*.json ./gs-client-server/
 
+# Clean any existing node_modules and package-lock files
+RUN rm -rf node_modules package-lock.json gs-client-app/node_modules gs-client-app/package-lock.json gs-client-server/node_modules gs-client-server/package-lock.json
+
 # Install all dependencies (including dev dependencies)
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -32,7 +42,7 @@ COPY . .
 RUN npm run build
 
 # Production stage
-FROM node:22-alpine AS production
+FROM node:22-slim AS production
 
 WORKDIR /app
 
@@ -49,8 +59,8 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/gs-client-app/dist ./gs-client-app/dist
 
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nextjs -u 1001
+RUN groupadd -g 1001 nodejs
+RUN useradd -r -u 1001 -g nodejs nextjs
 
 # Change ownership of the app directory
 RUN chown -R nextjs:nodejs /app
