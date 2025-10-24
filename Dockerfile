@@ -1,72 +1,109 @@
 # Multi-stage build for Node.js application
-FROM node:22-slim AS base
+FROM node:24 AS base
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy root package files
 COPY package*.json ./
-COPY gs-client-app/package*.json ./gs-client-app/
-COPY gs-client-server/package*.json ./gs-client-server/
 
-# Install dependencies
-RUN npm ci --only=production
+# Install root dependencies first
+RUN npm ci
 
-# Build stage
-FROM node:22-slim AS build
-
-# Install build dependencies for native modules
-RUN apt-get update && apt-get install -y \
-    python3 \
-    make \
-    g++ \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 1: Build Vite/App
+FROM node:24 AS app-build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy app package files
 COPY gs-client-app/package*.json ./gs-client-app/
-COPY gs-client-server/package*.json ./gs-client-server/
+WORKDIR /app/gs-client-app
 
-# Clean npm cache and install dependencies
-RUN npm cache clean --force
-RUN rm -rf node_modules package-lock.json
-RUN rm -rf gs-client-app/node_modules gs-client-app/package-lock.json
-RUN rm -rf gs-client-server/node_modules gs-client-server/package-lock.json
-
-# Install all dependencies (including dev dependencies)
+# Install app dependencies
 RUN npm install
 
-# Copy source code
-COPY . .
+# Install rollup native binary to fix build issues
+RUN npm install @rollup/rollup-linux-x64-gnu --save-optional
 
-# Build the application
+# Completely remove sass-embedded and force pure sass usage
+# RUN npm uninstall sass-embedded --save-dev || true
+# RUN rm -rf node_modules/sass-embedded || true
+# RUN rm -rf node_modules/@quasar/vite-plugin/node_modules/sass-embedded || true
+
+# # Install only pure sass
+# RUN npm install sass@^1.93.2 --save-dev
+
+# Set environment variables to force sass usage instead of sass-embedded
+# ENV SASS_BINARY_SITE=https://github.com/sass/dart-sass/releases/download/
+# ENV SASS_BINARY_NAME=dart-sass-linux-x64-1.69.5.tar.gz
+# ENV SASS_USE_EMBEDDED=false
+# ENV SASS_EMBEDDED=false
+# ENV SASS_IMPLEMENTATION=sass
+# ENV SASS_EMBEDDED_DISABLE=true
+
+# Force sass to use pure JS implementation
+# RUN npm config set sass_embedded false || true
+
+# Copy app source code
+COPY gs-client-app/ ./
+
+# Build the app
 RUN npm run build
 
-# Production stage
-FROM node:22-slim AS production
+# Stage 2: Build Express/Server
+FROM node:24 AS server-build
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY gs-client-app/package*.json ./gs-client-app/
+# Copy server package files
 COPY gs-client-server/package*.json ./gs-client-server/
+WORKDIR /app/gs-client-server
 
-# Install only production dependencies
+# Install server dependencies
+RUN npm install
+
+# Copy server source code
+COPY gs-client-server/ ./
+
+# Build the server
+RUN npm run build
+
+# Stage 3: Final build stage
+FROM node:24 AS build
+
+WORKDIR /app
+
+# Copy root package files
+COPY package*.json ./
+
+# Install root dependencies
+RUN npm ci
+
+# Copy built app from app-build stage
+COPY --from=app-build /app/dist ./dist/client
+
+# Copy built server from server-build stage
+COPY --from=server-build /app/dist ./dist/server
+
+# Production stage
+FROM node:24 AS production
+
+WORKDIR /app
+
+# Copy root package files
+COPY package*.json ./
+
+# Install only production dependencies for root
 RUN npm ci --only=production && npm cache clean --force
 
+# Copy server package files and install production dependencies
+COPY gs-client-server/package*.json ./gs-client-server/
+WORKDIR /app/gs-client-server
+RUN npm install --only=production && npm cache clean --force
+
 # Copy built application from build stage
+WORKDIR /app
 COPY --from=build /app/dist ./dist
-
-# Create non-root user
-RUN groupadd -g 1001 nodejs
-RUN useradd -r -u 1001 -g nodejs nextjs
-
-# Change ownership of the app directory
-RUN chown -R nextjs:nodejs /app
-USER nextjs
 
 # Expose port
 EXPOSE 3000
