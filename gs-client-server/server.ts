@@ -109,6 +109,15 @@ app.get('/api/restaurants/:id', (req: Request, res: Response) => {
   res.json({ id: Number.parseInt(id), name: '맛있는 식당', address: '서울시 강남구' });
 });
 
+// 환경변수 주입을 위한 API 엔드포인트
+app.get('/api/env', (req: Request, res: Response) => {
+  res.json({
+    VITE_NAVER_CLIENT_ID: process.env.VITE_NAVER_CLIENT_ID,
+    VITE_APP_VERSION: process.env.VITE_APP_VERSION,
+    NODE_ENV: process.env.NODE_ENV
+  });
+});
+
 // SPA 라우팅을 위한 fallback (모든 라우트를 index.html로 리다이렉트)
 app.get('*', (req: Request, res: Response) => {
   res.sendFile(join(DIST_PATH, 'index.html'));

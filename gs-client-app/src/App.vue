@@ -63,9 +63,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { useQuasar } from 'quasar'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -90,7 +90,26 @@ const navs = [
 
 // 표기용
 const year = new Date().getFullYear()
-const appVersion = import.meta.env.VITE_APP_VERSION ?? 'dev'
+const appVersion = ref(import.meta.env.VITE_APP_VERSION ?? 'dev')
+
+// 런타임에 환경변수 가져오기
+onMounted(async () => {
+  // 개발 환경에서는 import.meta.env 우선 사용
+  if (import.meta.env.DEV) {
+    // 개발 환경에서는 이미 설정된 값 사용
+  } else {
+    // 프로덕션에서는 서버에서 환경변수 가져오기
+    try {
+      const response = await fetch('/api/env')
+      const env = await response.json()
+      if (env.VITE_APP_VERSION) {
+        appVersion.value = env.VITE_APP_VERSION
+      }
+    } catch (error) {
+      console.warn('환경변수를 서버에서 가져올 수 없습니다. 빌드 시 환경변수를 사용합니다.', error)
+    }
+  }
+})
 
 // 유틸
 const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
