@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as https from 'node:https';
 import { join } from 'node:path';
@@ -15,6 +16,31 @@ const USE_HTTPS: boolean = process.env.USE_HTTPS === 'true';
 
 // Vite 빌드된 정적 파일 경로
 const DIST_PATH = join(__dirname, '../client');
+
+// 자체 서명 인증서 생성 함수
+function generateSelfSignedCert(): { key: string; cert: string } {
+  const keyPath = join(__dirname, 'self-signed-key.pem');
+  const certPath = join(__dirname, 'self-signed-cert.pem');
+  
+  try {
+    // OpenSSL을 사용하여 자체 서명 인증서 생성
+    const keyCommand = `openssl genrsa -out "${keyPath}" 2048`;
+    const certCommand = `openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 365 -subj "/C=KR/ST=Seoul/L=Seoul/O=Dev/OU=IT/CN=localhost"`;
+    
+    execSync(keyCommand, { stdio: 'pipe' });
+    execSync(certCommand, { stdio: 'pipe' });
+    
+    console.log('🔒 자체 서명 인증서가 생성되었습니다.');
+    
+    return {
+      key: fs.readFileSync(keyPath, 'utf8'),
+      cert: fs.readFileSync(certPath, 'utf8')
+    };
+  } catch (error) {
+    console.error('❌ 자체 서명 인증서 생성 실패:', error);
+    throw error;
+  }
+}
 
 // HTTPS 설정 (개발용 자체 서명 인증서)
 let httpsOptions: https.ServerOptions | undefined;
@@ -29,12 +55,18 @@ if (USE_HTTPS) {
         key: fs.readFileSync(keyPath),
         cert: fs.readFileSync(certPath)
       };
-      console.log('🔒 HTTPS 인증서를 사용합니다.');
+      console.log('🔒 기존 HTTPS 인증서를 사용합니다.');
     } else {
-      console.log('⚠️  HTTPS 인증서 파일을 찾을 수 없습니다. HTTP로 실행됩니다.');
+      console.log('⚠️  기존 HTTPS 인증서 파일을 찾을 수 없습니다. 자체 서명 인증서를 생성합니다.');
+      const selfSignedCert = generateSelfSignedCert();
+      httpsOptions = {
+        key: selfSignedCert.key,
+        cert: selfSignedCert.cert
+      };
     }
   } catch (error) {
     console.log('⚠️  HTTPS 설정 중 오류가 발생했습니다. HTTP로 실행됩니다.');
+    console.error('HTTPS 설정 오류:', error);
   }
 }
 
