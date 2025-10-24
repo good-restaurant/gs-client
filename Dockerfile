@@ -79,11 +79,11 @@ COPY package*.json ./
 # Install root dependencies
 RUN npm ci
 
-# Copy built app from app-build stage
-COPY --from=app-build /app/dist ./dist/client
+# Copy built app from app-build stage (vite builds to ../dist/client from gs-client-app)
+COPY --from=app-build /app/../dist/client ./dist/client
 
-# Copy built server from server-build stage
-COPY --from=server-build /app/dist ./dist
+# Copy built server from server-build stage (tsc builds to ../dist/server from gs-client-server)
+COPY --from=server-build /app/../dist/server ./dist
 
 # Production stage - Use Alpine for smaller image
 FROM node:24-alpine AS production
