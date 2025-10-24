@@ -45,6 +45,13 @@ export default defineConfig(() => {
       port: 5173,
       strictPort: true,
       cors: true,
+      proxy: {
+        '/api': {
+          target: 'https://dev-naver.i4624.info:3000',
+          changeOrigin: true,
+          secure: false
+        }
+      },
       ...(function() {
         try {
           const keyPath = path.resolve(__dirname, 'dev-naver.i4624.info-key.pem')
