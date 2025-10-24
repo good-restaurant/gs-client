@@ -3,10 +3,11 @@ import dotenv from 'dotenv';
 import express, { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
-import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as https from 'node:https';
 import { join } from 'node:path';
+// @ts-ignore
+import selfsigned from 'selfsigned';
 
 dotenv.config();
 
@@ -17,24 +18,30 @@ const USE_HTTPS: boolean = process.env.USE_HTTPS === 'true';
 // Vite 빌드된 정적 파일 경로
 const DIST_PATH = join(__dirname, '../client');
 
-// 자체 서명 인증서 생성 함수
+// 자체 서명 인증서 생성 함수 (selfsigned 패키지 사용)
 function generateSelfSignedCert(): { key: string; cert: string } {
-  const keyPath = join(__dirname, 'self-signed-key.pem');
-  const certPath = join(__dirname, 'self-signed-cert.pem');
-  
   try {
-    // OpenSSL을 사용하여 자체 서명 인증서 생성
-    const keyCommand = `openssl genrsa -out "${keyPath}" 2048`;
-    const certCommand = `openssl req -new -x509 -key "${keyPath}" -out "${certPath}" -days 365 -subj "/C=KR/ST=Seoul/L=Seoul/O=Dev/OU=IT/CN=localhost"`;
+    // selfsigned 패키지를 사용하여 올바른 X.509 인증서 생성
+    const attrs = [
+      { name: 'commonName', value: 'localhost' },
+      { name: 'countryName', value: 'KR' },
+      { name: 'stateOrProvinceName', value: 'Seoul' },
+      { name: 'localityName', value: 'Seoul' },
+      { name: 'organizationName', value: 'Dev' },
+      { name: 'organizationalUnitName', value: 'IT' }
+    ];
     
-    execSync(keyCommand, { stdio: 'pipe' });
-    execSync(certCommand, { stdio: 'pipe' });
+    const pems = selfsigned.generate(attrs, {
+      keySize: 2048,
+      days: 365,
+      algorithm: 'sha256'
+    });
     
-    console.log('🔒 자체 서명 인증서가 생성되었습니다.');
+    console.log('🔒 selfsigned 패키지로 자체 서명 인증서가 생성되었습니다.');
     
     return {
-      key: fs.readFileSync(keyPath, 'utf8'),
-      cert: fs.readFileSync(certPath, 'utf8')
+      key: pems.private,
+      cert: pems.cert
     };
   } catch (error) {
     console.error('❌ 자체 서명 인증서 생성 실패:', error);
@@ -125,3 +132,4 @@ if (USE_HTTPS && httpsOptions) {
     console.log(`🌐 HTTP Server running on http://0.0.0.0:${PORT}`);
   });
 }
+
