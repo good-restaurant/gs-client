@@ -160,3 +160,5 @@ vite.config.ts.timestamp-*
 /.idea/modules.xml
 /.idea/vcs.xml
 gs-client-app/mkcert.exe
+
+/.idea
