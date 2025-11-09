@@ -18,6 +18,7 @@
           <q-btn flat icon="restaurant" label="맛집 목록" :to="{ name: 'restaurants' }" />
           <q-btn flat icon="info" label="소개" :to="{ name: 'about' }" />
           <q-btn flat icon="map" label="지도 보기" :to="{ name: 'map' }" />
+          <q-btn flat icon="admin_panel_settings" label="관리자 페이지" :to="{ name: 'admin' }" />
         </div>
 
         <q-separator vertical spaced class="gt-sm" />
@@ -85,7 +86,8 @@ const navs = [
   { name: 'home', label: '홈', icon: 'home' },
   { name: 'restaurants', label: '맛집 목록', icon: 'restaurant' },
   { name: 'map', label: '지도 보기', icon: 'map' },
-  { name: 'about', label: '소개', icon: 'info' }
+  { name: 'about', label: '소개', icon: 'info' },
+  {name: 'admin', label: '관리자 페이지', icon:'admin_panel_settings'}
 ]
 
 // 표기용
