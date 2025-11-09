@@ -22,7 +22,7 @@
                 </q-inner-loading>
 
                 <q-list bordered separator v-if="!loading && filtered.length">
-                    <q-item v-for="r in filtered" :key="r.id" clickable>
+                    <q-item v-for="r in filtered" :key="r.id" clickable @click="goDetail(r.id)">
                         <q-item-section>
                             <q-item-label class="text-weight-medium">{{ r.restaurantName }}</q-item-label>
                             <q-item-label caption>{{ r.category }} · {{ r.address }}</q-item-label>
@@ -65,6 +65,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRouter } from 'vue-router'
 import {
     listRestaurants,
     createRestaurant,
@@ -77,6 +78,7 @@ const $q = useQuasar()
 const loading = ref(false)
 const search = ref('')
 const rows = ref([])
+const router = useRouter()
 
 // 다이얼로그 상태
 const dialog = ref({ open: false, mode: 'create', target: null })
@@ -111,6 +113,11 @@ async function load() {
     } finally {
         loading.value = false
     }
+}
+
+function goDetail(id) {
+    if (!id) return
+    router.push({ name: 'restaurant-detail', params: { id } })
 }
 
 function openCreate() {
