@@ -61,28 +61,28 @@ export async function getRestaurantsByEmd(emd, limit = 20) {
     });
 }
 
+// 필요하면 getRestaurantById 를 그대로 쓸 수 있게, 기존 v3 단건 조회를 래핑
+export async function getRestaurantById(id) {
+    return getRestaurant(id);
+}
+
 /** v1 사진 업로드 /v1/signed-upload/restaurant/{restaurantId} */
 export async function uploadRestaurantPicture(restaurantId, file) {
-    const formData = new FormData();
-    formData.append('file', file);
+    const form = new FormData();
+    form.append('file', file);
 
-    const res = await fetch(`${API_BASE}/v1/signed-upload/restaurant/${encodeURIComponent(restaurantId)}`, {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!res.ok) {
-        throw new Error(`Upload failed: ${res.status} ${res.statusText}`);
-    }
-    return res.json();
+    return httpRequest(
+        `/v1/signed-upload/restaurant/${encodeURIComponent(restaurantId)}`,
+        {
+            method: 'POST',
+            body: form,
+        }
+    );
 }
 
 /** v1 사진 다운로드 URL 조회 /v1/signed-download/{pictureId} */
 export async function getPictureSignedUrl(pictureId) {
-    const res = await fetch(`${API_BASE}/v1/signed-download/${encodeURIComponent(pictureId)}`);
-    if (!res.ok) {
-        throw new Error(`Signed URL fetch failed: ${res.status} ${res.statusText}`);
-    }
-    // swagger 상 response body 가 string 이라 그대로 돌려줌
-    return res.text();
+    return httpRequest(
+        `/v1/signed-download/${encodeURIComponent(pictureId)}`
+    );
 }

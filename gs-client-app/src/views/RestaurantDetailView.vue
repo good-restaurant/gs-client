@@ -183,9 +183,18 @@ async function handleUpload() {
         return
     }
 
+    // q-file 이 File 또는 File[] 을 줄 수 있어서 안전하게 1개만 추출
+    const raw = selectedFile.value
+    const file = Array.isArray(raw) ? raw[0] : raw
+
+    if (!(file instanceof File)) {
+        console.error('선택된 파일 형식이 잘못되었습니다:', file)
+        $q.notify({ type: 'negative', message: '선택된 파일을 읽을 수 없습니다.' })
+        return
+    }
+
     uploading.value = true
     try {
-        const file = selectedFile.value
         await uploadRestaurantPicture(restaurantId.value, file)
 
         $q.notify({ type: 'positive', message: '사진이 업로드되었습니다.' })
