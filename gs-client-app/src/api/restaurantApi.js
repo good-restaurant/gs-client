@@ -1,6 +1,6 @@
 import { httpRequest } from './httpClient';
 
-const API_BASE = 'https://gs-main-api.i4624.info';
+// const API_BASE = 'https://gs-main-api.i4624.info';
 
 /** v3 전체 목록 */
 export async function listRestaurants(limit = 100) {
