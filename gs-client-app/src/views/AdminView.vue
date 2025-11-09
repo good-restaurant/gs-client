@@ -1,42 +1,87 @@
 <template>
-  <q-page class="q-pa-md">
-    <q-card>
-      <q-card-section class="row items-center q-gutter-sm">
-        <div class="text-h5 text-primary">관리자 페이지</div>
-        <q-space />
-        <q-btn color="primary" label="새 음식점 추가" disabled />
-      </q-card-section>
+  <q-page class="q-pa-md bg-grey-1">
+    <div class="column q-gutter-md">
 
-      <q-separator />
+      <!-- 상단 헤더 카드 -->
+      <q-card flat bordered class="admin-hero">
+        <q-card-section class="row items-center justify-between no-wrap">
 
-      <q-card-section>
-        <div class="row items-center q-gutter-sm q-mb-sm">
-          <q-input dense outlined v-model="search" placeholder="음식점 이름 검색" clearable
-                   class="col-12 col-md-4" />
+          <!-- 왼쪽: 아이콘 + 텍스트 -->
+          <div class="row items-center q-gutter-sm">
+            <q-avatar color="primary" text-color="white" size="48px">
+              <q-icon name="admin_panel_settings" />
+            </q-avatar>
+            <div>
+              <div class="text-h5 text-weight-bold">
+                관리자
+              </div>
+              <div class="text-caption text-grey-7 q-mt-xs">
+                모범음식점 데이터를 관리하는 전용 페이지입니다.
+              </div>
+            </div>
+          </div>
+
+          <!-- 오른쪽: 현재는 비활성인 추가 버튼 -->
+          <div class="col-auto">
+            <q-btn color="primary" icon="add" label="새 음식점 추가" unelevated disable />
+          </div>
+        </q-card-section>
+
+        <q-separator inset />
+
+        <!-- 간단한 통계 -->
+        <q-card-section class="row q-col-gutter-sm">
+          <div class="col-auto">
+            <q-chip square color="primary" text-color="white" icon="store">
+              총 {{ rows.length }}곳 등록됨
+            </q-chip>
+          </div>
+          <div class="col-auto">
+            <q-chip square outline color="primary" text-color="primary" icon="info">
+              아직 더미 데이터만 표시됩니다.
+            </q-chip>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      <!-- 리스트 카드 -->
+      <q-card flat bordered>
+        <q-card-section class="row items-center q-gutter-sm q-pb-none">
+          <q-input dense outlined v-model="search" placeholder="음식점 이름 검색" clearable class="col-12 col-md-4" />
           <q-space />
           <q-btn flat icon="refresh" label="새로고침" disabled />
-        </div>
+        </q-card-section>
 
-        <q-inner-loading :showing="loading">
-          <q-spinner size="50px" />
-        </q-inner-loading>
+        <q-card-section class="q-pt-none">
 
-        <q-list bordered separator v-if="!loading && filtered.length">
-          <q-item v-for="r in filtered" :key="r.id">
-            <q-item-section>
-              <q-item-label class="text-weight-medium">{{ r.restaurantName }}</q-item-label>
-              <q-item-label caption>{{ r.category }} · {{ r.address }}</q-item-label>
-            </q-item-section>
-            <q-item-section side>
-              <q-btn dense flat icon="edit" disabled />
-              <q-btn dense flat icon="delete" color="negative" disabled />
-            </q-item-section>
-          </q-item>
-        </q-list>
+          <q-inner-loading :showing="loading">
+            <q-spinner size="50px" />
+          </q-inner-loading>
 
-        <div v-else-if="!loading" class="text-grey q-mt-md">표시할 데이터가 없습니다.</div>
-      </q-card-section>
-    </q-card>
+          <q-list bordered separator v-if="!loading && filtered.length">
+            <q-item v-for="r in filtered" :key="r.id">
+              <q-item-section>
+                <q-item-label class="text-weight-medium">
+                  {{ r.restaurantName }}
+                </q-item-label>
+                <q-item-label caption>
+                  {{ r.category }} · {{ r.address }}
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side top>
+                <q-btn dense flat icon="edit" disable />
+                <q-btn dense flat icon="delete" color="negative" disable />
+              </q-item-section>
+            </q-item>
+          </q-list>
+
+          <div v-else-if="!loading" class="text-grey q-mt-md">
+            표시할 데이터가 없습니다.
+          </div>
+        </q-card-section>
+      </q-card>
+
+    </div>
   </q-page>
 </template>
 
@@ -68,6 +113,13 @@ const filtered = computed(() => {
 
 // 로딩 시뮬레이션
 onMounted(() => {
-  setTimeout(() => loading.value = false, 500)
+  setTimeout(() => (loading.value = false), 500)
 })
 </script>
+
+<style scoped>
+.admin-hero {
+  border-radius: 16px;
+  background: linear-gradient(135deg, #e3f2fd, #ffffff);
+}
+</style>
