@@ -79,7 +79,7 @@ async function renderMapWithData() {
     let list = []
 
     try {
-        const resp = await fetch(`${API_BASE}/restaurant/all?limit=${LIMIT}`, {
+        const resp = await fetch(`${API_BASE}/v3/restaurant/all?limit=${LIMIT}`, {
             headers: { Accept: 'application/json' }
         })
         if (!resp.ok) {
