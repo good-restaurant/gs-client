@@ -15,7 +15,7 @@
 
             <div>
               <div class="text-h5 text-weight-bold text-primary">
-                맛집 목록
+                모범음식점 목록
               </div>
               <div class="text-body2 text-grey-8 q-mt-xs">
                 등록된 모범음식점 정보를 한눈에 보고, 새로 추가하거나 수정·삭제할 수 있는 페이지입니다.
@@ -32,7 +32,7 @@
               color="primary"
               unelevated
               icon="add"
-              label="새 맛집 추가"
+              label="새 모범음식점 추가"
               @click="openCreate()"
             />
           </div>
@@ -159,8 +159,8 @@
 
           <div v-else-if="!loading" class="text-grey text-center q-mt-xl">
             표시할 데이터가 없습니다. <br />
-            상단의 <span class="text-primary text-weight-medium">[새 맛집 추가]</span> 버튼으로
-            첫 번째 맛집을 등록해 보세요.
+            상단의 <span class="text-primary text-weight-medium">[새 모범음식점 추가]</span> 버튼으로
+            첫 번째 모범음식점을 등록해 보세요.
           </div>
         </q-card-section>
       </q-card>
@@ -169,7 +169,7 @@
       <q-dialog v-model="dialog.open">
         <q-card style="min-width: 380px; max-width: 90vw;">
           <q-card-section class="text-h6">
-            {{ dialog.mode === 'create' ? '맛집 추가' : '맛집 수정' }}
+            {{ dialog.mode === 'create' ? '모범음식점 추가' : '모범음식점 수정' }}
           </q-card-section>
           <q-card-section class="q-gutter-md">
             <q-input v-model="form.restaurantName" label="이름 *" outlined dense />

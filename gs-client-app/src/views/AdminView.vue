@@ -38,7 +38,7 @@
           </div>
           <div class="col-auto">
             <q-chip square outline color="primary" text-color="primary" icon="info">
-              아직 더미 데이터만 표시됩니다.
+              데이터 추가 예정입니다.
             </q-chip>
           </div>
         </q-card-section>

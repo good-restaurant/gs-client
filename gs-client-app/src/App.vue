@@ -15,7 +15,7 @@
         <!-- 데스크톱 상단 네비게이션 -->
         <div class="gt-sm q-gutter-sm">
           <q-btn flat icon="home" label="홈" :to="{ name: 'home' }" />
-          <q-btn flat icon="restaurant" label="맛집 목록" :to="{ name: 'restaurants' }" />
+          <q-btn flat icon="restaurant" label="모범음식점 목록" :to="{ name: 'restaurants' }" />
           <q-btn flat icon="map" label="지도 보기" :to="{ name: 'map' }" />
           <q-btn flat icon="admin_panel_settings" label="관리자" :to="{ name: 'admin' }" />
         </div>
@@ -94,7 +94,7 @@ watch(dark, v => $q.dark.set(v))
 // 네비게이션 정의 (라우트 name과 반드시 일치하게)
 const navs = [
   { name: 'home', label: '홈', icon: 'home' },
-  { name: 'restaurants', label: '맛집 목록', icon: 'restaurant' },
+  { name: 'restaurants', label: '모범음식점 목록', icon: 'restaurant' },
   { name: 'map', label: '지도 보기', icon: 'map' },
   { name: 'admin', label: '관리자', icon: 'admin_panel_settings' }
 ]

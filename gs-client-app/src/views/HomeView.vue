@@ -14,7 +14,7 @@
 
             <div>
               <div class="text-h5 text-weight-bold text-primary">
-                맛집 추천 플랫폼
+                모범음식점 추천 플랫폼
               </div>
               <div class="text-body2 text-grey-8 q-mt-xs">
                 당신 근처의 모범음식점을 한눈에 찾을 수 있는
@@ -25,7 +25,7 @@
 
           <!-- 오른쪽: CTA 버튼 -->
           <div class="col-auto">
-            <q-btn color="primary" unelevated size="lg" class="home-hero__button" label="맛집 목록 보기" icon="list"
+            <q-btn color="primary" unelevated size="lg" class="home-hero__button" label="모범음식점 목록 보기" icon="list"
               @click="goToRestaurants" />
           </div>
         </q-card-section>
@@ -46,7 +46,7 @@
           <q-separator spaced />
 
           <div class="text-caption text-grey-7 q-mb-md">
-            모범음식점 데이터를 기반으로 운영하는 지역 맛집 탐색 서비스입니다.
+            공공 데이터를 기반으로 운영하는 모범음식점 탐색 서비스입니다.
           </div>
 
           <div class="text-body2 q-mb-sm text-weight-bold">
@@ -54,7 +54,7 @@
           </div>
           <ul class="home-list">
             <li>행정구역·주소를 기준으로 모범음식점을 검색할 수 있어요.</li>
-            <li>지도에서 주변 맛집 위치를 한눈에 확인할 수 있어요.</li>
+            <li>지도에서 주변 모범음식점 위치를 한눈에 확인할 수 있어요.</li>
             <li>가게 상세 페이지에서 실제 방문 사진을 업로드해 기록할 수 있어요.</li>
           </ul>
 
@@ -72,7 +72,7 @@
           <ul class="home-list">
             <li>
               <router-link to="/restaurants" class="text-primary">
-                맛집 목록
+                모범음식점 목록
               </router-link>
               에서 전체 리스트를 검색·필터링할 수 있습니다.
             </li>
@@ -80,7 +80,7 @@
               <router-link to="/map" class="text-primary">
                 지도 보기
               </router-link>
-              에서 위치를 기준으로 주변 맛집을 탐색할 수 있습니다.
+              에서 위치를 기준으로 주변 모범음식점을 탐색할 수 있습니다.
             </li>
             <li>
               관심 있는 가게를 클릭하면 <span class="text-primary">상세 페이지</span>로 이동하여

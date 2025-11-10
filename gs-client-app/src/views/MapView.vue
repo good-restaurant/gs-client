@@ -7,7 +7,7 @@
             <q-card flat bordered>
                 <q-card-section class="row items-center q-col-gutter-sm">
                     <div class="text-subtitle1 text-weight-bold col-12 col-md-3">
-                        주변 맛집 검색
+                        주변 모범음식점 검색
                     </div>
 
                     <!-- 도로명 주소 입력 -->
