@@ -18,13 +18,24 @@ export async function httpRequest(path, { method = 'GET', params, body } = {}) {
         });
     }
 
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {};
+
+    let requestBody = undefined;
+
+    // FormData 인 경우 그대로 전송 (브라우저가 multipart/form-data 헤더 자동 설정)
+    if (body instanceof FormData) {
+        requestBody = body;
+    } else if (body !== undefined && body !== null) {
+        headers['Content-Type'] = 'application/json';
+        requestBody = JSON.stringify(body);
+    }
 
     const res = await fetch(url.toString(), {
         method,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body: requestBody,
     });
+
 
     const text = await res.text();
     let data;

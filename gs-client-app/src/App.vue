@@ -15,10 +15,9 @@
         <!-- 데스크톱 상단 네비게이션 -->
         <div class="gt-sm q-gutter-sm">
           <q-btn flat icon="home" label="홈" :to="{ name: 'home' }" />
-          <q-btn flat icon="restaurant" label="맛집 목록" :to="{ name: 'restaurants' }" />
-          <q-btn flat icon="info" label="소개" :to="{ name: 'about' }" />
+          <q-btn flat icon="restaurant" label="모범음식점 목록" :to="{ name: 'restaurants' }" />
           <q-btn flat icon="map" label="지도 보기" :to="{ name: 'map' }" />
-          <q-btn flat icon="admin_panel_settings" label="관리자 페이지" :to="{ name: 'admin' }" />
+          <q-btn flat icon="admin_panel_settings" label="관리자" :to="{ name: 'admin' }" />
         </div>
 
         <q-separator vertical spaced class="gt-sm" />
@@ -37,11 +36,22 @@
 
         <q-item v-for="it in navs" :key="it.name" :to="{ name: it.name }" clickable v-ripple
           :active="route.name === it.name" active-class="bg-primary text-white">
-          <q-item-section avatar><q-icon :name="it.icon" /></q-item-section>
+          <q-item-section avatar>
+            <q-icon :name="it.icon" />
+          </q-item-section>
           <q-item-section>{{ it.label }}</q-item-section>
         </q-item>
       </q-list>
+
+      <!-- 드로어 하단 간단 소개 -->
+      <q-separator spaced />
+      <div class="q-pa-md text-caption text-grey-6">
+        주변 모범음식점을 한눈에 찾는
+        <span class="text-primary text-weight-medium">GoodRestaurant</span>
+        입니다.
+      </div>
     </q-drawer>
+
 
     <!-- 라우트가 그려질 영역 -->
     <q-page-container>
@@ -84,10 +94,9 @@ watch(dark, v => $q.dark.set(v))
 // 네비게이션 정의 (라우트 name과 반드시 일치하게)
 const navs = [
   { name: 'home', label: '홈', icon: 'home' },
-  { name: 'restaurants', label: '맛집 목록', icon: 'restaurant' },
+  { name: 'restaurants', label: '모범음식점 목록', icon: 'restaurant' },
   { name: 'map', label: '지도 보기', icon: 'map' },
-  { name: 'about', label: '소개', icon: 'info' },
-  {name: 'admin', label: '관리자 페이지', icon:'admin_panel_settings'}
+  { name: 'admin', label: '관리자', icon: 'admin_panel_settings' }
 ]
 
 // 표기용
