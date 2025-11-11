@@ -7,7 +7,7 @@
         <q-btn v-if="$q.screen.lt.md" flat dense round icon="menu" aria-label="메뉴 열기" @click="toggleLeftDrawer" />
         <!-- 타이틀(클릭 시 홈) -->
         <q-toolbar-title class="cursor-pointer" @click="goHome">
-          🍽️ GoodRestaurant
+          🍽️ 삼시세끼 모범밥상
         </q-toolbar-title>
 
         <q-space />
