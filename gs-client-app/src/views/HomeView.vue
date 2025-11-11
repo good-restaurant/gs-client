@@ -14,10 +14,10 @@
 
             <div>
               <div class="text-h5 text-weight-bold text-primary">
-                모범음식점 추천 플랫폼
+                삼시세끼 모범밥상: 모범음식점 추천 플랫폼
               </div>
               <div class="text-body2 text-grey-8 q-mt-xs">
-                당신 근처의 모범음식점을 한눈에 찾을 수 있는
+                당신 근처의 모범음식점을 추천 받을 수 있는
                 <span class="text-weight-medium">GoodRestaurant</span> 서비스입니다.
               </div>
             </div>
@@ -36,7 +36,7 @@
         <q-card-section>
           <div class="row items-center justify-between q-mb-sm">
             <div class="text-subtitle1 text-weight-bold">
-              GoodRestaurant 소개
+              삼시세끼 모범밥상 소개
             </div>
             <q-chip dense color="primary" text-color="white" outline>
               모범음식점 데이터 기반
@@ -46,7 +46,7 @@
           <q-separator spaced />
 
           <div class="text-caption text-grey-7 q-mb-md">
-            공공 데이터를 기반으로 운영하는 모범음식점 탐색 서비스입니다.
+            공공 데이터를 기반으로 운영하는 모범음식점 추천 플랫폼입니다.
           </div>
 
           <div class="text-body2 q-mb-sm text-weight-bold">
