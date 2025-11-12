@@ -5,73 +5,71 @@
 
             <!-- 상단 검색 카드 -->
             <q-card flat bordered>
-                <q-card-section>
-                    <!-- 상단 검색 영역 전체 -->
-                    <div class="row">
-                        <!-- 도로명 주소 입력 -->
-                        <div class="col-10 col-sm-10 col-md-10">
-                            <q-input
-                            v-model="address"
-                            dense outlined clearable
-                            label="주변 모범음식점 검색"
-                            placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
-                            @keyup.enter="handleSearch"
-                            class="col-10 col-sm-10 col-md-10"
-                            >
-                            <template #prepend>
-                                <q-icon name="place" />
-                            </template>
-                            </q-input>
-                        </div>
-                        <div class="col-2 col-sm-2 col-md-2">
-                            <q-btn
-                            color="primary"
-                            icon="search"
-                            label="검색"
-                            class="col-12 col-sm-12 col-md-12"
-                            style="height: 75%; margin-top: 1%; width: 100%;"
-                            @click="handleSearch"
+                <q-card-section class="q-pa-sm">
+                    <!-- 검색 입력 + 버튼 -->
+                    <div class="row items-center q-col-gutter-sm">
+                    <div class="col-9 col-sm-9 col-md-9">
+                        <q-input
+                        v-model="address"
+                        dense outlined clearable
+                        label="주변 모범음식점 검색"
+                        placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
+                        @keyup.enter="handleSearch"
+                        >
+                        <template #prepend>
+                            <q-icon name="place" />
+                        </template>
+                        </q-input>
+                    </div>
+
+                    <div class="col-3 col-sm-3 col-md-3 flex justify-end">
+                        <q-btn
+                        color="primary"
+                        icon="search"
+                        :label="$q.screen.gt.xs ? '검색' : ''"
+                        unelevated
+                        class="full-width text-no-wrap"
+                        style="height: 40px;"
+                        @click="handleSearch"
                         />
-                        </div>
+                    </div>
+                    </div>
 
-                        </div>
-                    <!-- 버튼 및 선택 박스 영역 -->
-                    <div class="row">
-                        <div class="col-4 col-sm-4 col-md-4">
-                            <q-btn
-                            color="secondary"
-                            icon="my_location"
-                            label="현재위치"
-                            class="col-12 col-sm-12 col-md-12"
-                            @click="handleCurrentLocation"
-                            style="height: 75%; margin-top: 1%; width: 100%;"
-                            />
-                        </div>
+                    <!-- 하단 버튼 / 셀렉트 3개 -->
+                    <div class="row items-center q-col-gutter-sm q-mt-xs">
+                    <div class="col-4 col-md-4">
+                        <q-btn
+                        color="secondary"
+                        icon="my_location"
+                        :label="$q.screen.gt.xs ? '현재위치' : ''"
+                        unelevated
+                        class="full-width text-no-wrap"
+                        style="height: 40px; min-width: 25%;"
+                        @click="handleCurrentLocation"
+                        />
+                    </div>
 
-                        <div class="col-4 col-sm-4 col-md-4">
-                            <q-select
-                                v-model="radius"
-                                :options="radiusOptions"
-                                dense outlined emit-value map-options
-                                label="반경"
-                                class="col-12 col-sm-12 col-md-12"
-                                style="height: 75%; margin-top: 1%; width: 100%;"
-                            />
-                        </div>
-                        <div class="col-4 col-sm-4 col-md-4">
-                            <q-select
-                                v-model="limit"
-                                :options="limitOptions"
-                                dense outlined emit-value map-options
-                                label="개수"
-                                class="col-12 col-sm-12 col-md-12"
-                                style="height: 75%; margin-top: 1%; width: 100%;"
-                            />
-                        </div>
-                        
+                    <div class="col-4 col-md-4">
+                        <q-select
+                        v-model="radius"
+                        :options="radiusOptions"
+                        dense outlined emit-value map-options
+                        label="반경"
+                        />
+                    </div>
+
+                    <div class="col-4 col-md-4">
+                        <q-select
+                        v-model="limit"
+                        :options="limitOptions"
+                        dense outlined emit-value map-options
+                        label="개수"
+                        />
+                    </div>
                     </div>
                 </q-card-section>
-            </q-card>
+                </q-card>
+
 
             <!-- 지도 카드 -->
             <q-card flat bordered>
