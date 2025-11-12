@@ -5,33 +5,62 @@
 
             <!-- 상단 검색 카드 -->
             <q-card flat bordered>
-                <q-card-section class="row items-center q-col-gutter-sm">
-                    <div class="text-subtitle1 text-weight-bold col-12 col-md-3">
-                        주변 모범음식점 검색
-                    </div>
+                <q-card-section>
+                    <!-- 상단 검색 영역 전체 -->
+                    <div class="row items-center q-col-gutter-sm justify-between">
 
                     <!-- 도로명 주소 입력 -->
-                    <q-input v-model="address" class="col-12 col-md-6" dense outlined clearable
-                        placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch">
+                    <div class="col-12 col-md-12 no-wrap">
+                        <q-input
+                        v-model="address"
+                        dense outlined clearable
+                        label="주변 모범음식점 검색"
+                        placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
+                        @keyup.enter="handleSearch"
+                        style="width: 100%"
+                        >
                         <template #prepend>
                             <q-icon name="place" />
                         </template>
-                    </q-input>
+                        </q-input>
+                    </div>
 
-                    <!-- 반경 선택 -->
-                    <q-select v-model="radius" :options="radiusOptions" class="col-6 col-md-2" dense outlined emit-value
-                        map-options label="검색 반경">
-                        <template #prepend>
-                            <q-icon name="radar" />
-                        </template>
-                    </q-select>
-
-                    <!-- 검색 버튼 -->
-                    <div class="col-6 col-md-1 flex justify-end">
-                        <q-btn color="primary" unelevated icon="search" label="검색" @click="handleSearch" />
+                    <!-- 버튼 및 선택 박스 영역 -->
+                    <div class="col-12 col-md-12 row items-center justify-between">
+                        <q-btn
+                        color="primary"
+                        dense
+                        icon="search"
+                        label="검색"
+                        class="col-6 col-md-3"
+                        @click="handleSearch"
+                        />
+                        <q-btn
+                        color="secondary"
+                        dense
+                        icon="my_location"
+                        label="현재위치"
+                        class="col-6 col-md-3"
+                        @click="handleCurrentLocation"
+                        />
+                        <q-select
+                        v-model="radius"
+                        :options="radiusOptions"
+                        dense outlined emit-value map-options
+                        label="반경"
+                        class="col-6 col-md-3 q-gutter-md"
+                        />
+                        <q-select
+                        v-model="limit"
+                        :options="limitOptions"
+                        dense outlined emit-value map-options
+                        label="개수"
+                        class="col-6 col-md-3 q-gutter-md"
+                        />
+                    </div>
                     </div>
                 </q-card-section>
-            </q-card>
+                </q-card>
 
             <!-- 지도 카드 -->
             <q-card flat bordered>
@@ -53,9 +82,9 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { getNearbyRestaurants, getRestaurantsByLocation } from '@/api/restaurantApi'
 import { useQuasar } from 'quasar'
-import { getNearbyRestaurants } from '@/api/restaurantApi'
+import { onMounted, ref } from 'vue'
 
 const $q = useQuasar()
 
@@ -65,6 +94,7 @@ const loading = ref(true)
 // 검색 폼 상태
 const address = ref('')
 const radius = ref(0.1) // km 단위라고 가정(백엔드 기본값과 동일)
+const limit = ref(20) // 기본 표시 개수
 
 // 반경 선택 옵션
 const radiusOptions = [
@@ -74,10 +104,20 @@ const radiusOptions = [
     { label: '1km', value: 1.0 }
 ]
 
+// 개수 제한 옵션
+const limitOptions = [
+    { label: '10개', value: 10 },
+    { label: '20개', value: 20 },
+    { label: '30개', value: 30 },
+    { label: '50개', value: 50 },
+    { label: '100개', value: 100 }
+]
+
 // 지도/마커 상태
 let map = null
 let infoWindow = null
 let markers = []
+let currentLocationMarker = null
 
 onMounted(async () => {
     try {
@@ -149,6 +189,124 @@ function clearMarkers() {
     markers = []
 }
 
+// 현재 위치 마커 제거
+function clearCurrentLocationMarker() {
+    if (currentLocationMarker) {
+        currentLocationMarker.setMap(null)
+        currentLocationMarker = null
+    }
+}
+
+// 현재 위치 마커 표시
+function showCurrentLocationMarker(lat, lon) {
+    clearCurrentLocationMarker()
+    
+    currentLocationMarker = new globalThis.naver.maps.Marker({
+        position: new globalThis.naver.maps.LatLng(lat, lon),
+        map,
+        title: '현재 위치',
+        icon: {
+            content: `
+                <div style="
+                    width: 20px;
+                    height: 20px;
+                    background-color: #4285F4;
+                    border: 3px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                "></div>
+            `,
+            anchor: new globalThis.naver.maps.Point(10, 10)
+        }
+    })
+    
+    // 현재 위치로 지도 이동
+    map.setCenter(new globalThis.naver.maps.LatLng(lat, lon))
+    map.setZoom(15)
+}
+
+// 현재 위치 가져오기
+function getCurrentLocation() {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error('이 브라우저는 위치 정보를 지원하지 않습니다.'))
+            return
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const lat = position.coords.latitude
+                const lon = position.coords.longitude
+                resolve({ lat, lon })
+            },
+            (error) => {
+                let message = '위치 정보를 가져올 수 없습니다.'
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        message = '위치 정보 사용 권한이 거부되었습니다.'
+                        break
+                    case error.POSITION_UNAVAILABLE:
+                        message = '위치 정보를 사용할 수 없습니다.'
+                        break
+                    case error.TIMEOUT:
+                        message = '위치 정보 요청 시간이 초과되었습니다.'
+                        break
+                }
+                reject(new Error(message))
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            }
+        )
+    })
+}
+
+// 현재 위치 기반 검색
+async function handleCurrentLocation() {
+    if (!map) {
+        $q.notify({ type: 'negative', message: '지도가 아직 초기화되지 않았습니다.' })
+        return
+    }
+
+    loading.value = true
+    try {
+        // 현재 위치 가져오기
+        const location = await getCurrentLocation()
+
+        // 현재 위치 마커 표시
+        showCurrentLocationMarker(location.lat, location.lon)
+
+        // radius를 km에서 m로 변환 (API는 미터 단위)
+        const radiusInMeters = (radius.value || 0.1) * 1000
+
+        // 현재 위치 기반 식당 검색
+        const res = await getRestaurantsByLocation({
+            lat: location.lat,
+            lon: location.lon,
+            radius: radiusInMeters,
+            limit: limit.value || 20
+        })
+
+        const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : [])
+
+        if (!list.length) {
+            clearMarkers()
+            $q.notify({ type: 'info', message: '주변에 표시할 가게가 없습니다.' })
+            return
+        }
+
+        updateMapWithRestaurants(list)
+        $q.notify({ type: 'positive', message: '현재 위치 기준으로 주변 식당을 검색했습니다.' })
+    } catch (e) {
+        console.error('현재 위치 검색 실패:', e)
+        $q.notify({ type: 'negative', message: e.message || '현재 위치 검색에 실패했습니다.' })
+    } finally {
+        loading.value = false
+    }
+}
+
 // 주소 기반 주변 검색 호출
 async function handleSearch() {
     const addr = address.value.trim()
@@ -162,12 +320,15 @@ async function handleSearch() {
         return
     }
 
+    // 주소 검색 시 현재 위치 마커 제거
+    clearCurrentLocationMarker()
+
     loading.value = true
     try {
         const res = await getNearbyRestaurants({
             address: addr,
             radius: radius.value || 0.1,
-            limit: 50
+            limit: limit.value || 20
         })
 
         const list = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : [])
