@@ -54,6 +54,13 @@ export async function getNearbyRestaurants({ address, radius = 0.1, limit = 20 }
     });
 }
 
+/** v3 위치 기반 조회 /v3/restaurant/location */
+export async function getRestaurantsByLocation({ lat, lon, radius = 250, limit = 20 }) {
+    return httpRequest('/v3/restaurant/location', {
+        params: { lat, lon, radius, limit },
+    });
+}
+
 /** v3 읍면동 기준 조회 /v3/restaurant/emd */
 export async function getRestaurantsByEmd(emd, limit = 20) {
     return httpRequest('/v3/restaurant/emd', {
