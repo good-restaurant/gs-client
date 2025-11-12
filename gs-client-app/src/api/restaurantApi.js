@@ -11,6 +11,17 @@ export async function listRestaurants(limit = 100) {
     );
 }
 
+/** v3 목록 검색 /v3/restaurant/list-search */
+export async function listSearchRestaurants(emd, limit = 100) {
+    const res = await httpRequest('/v3/restaurant/list-search', { 
+        params: { emd, limit } 
+    });
+    const list = Array.isArray(res) ? res : res?.data ?? [];
+    return [...list].sort((a, b) =>
+        String(a.restaurantName || '').localeCompare(String(b.restaurantName || ''), 'ko')
+    );
+}
+
 /** v3 생성 */
 export async function createRestaurant(payload) {
     return httpRequest('/v3/restaurant/create', {

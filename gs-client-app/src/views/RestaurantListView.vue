@@ -49,8 +49,18 @@
             v-model="search"
             placeholder="이름 / 주소 / 카테고리 검색"
             clearable
-            class="col-12 col-md-5"
+            class="col-12 col-md-4"
             prepend-inner-icon="search"
+          />
+          <q-input
+            dense
+            outlined
+            v-model="emdSearch"
+            placeholder="읍면동 검색 (예: 화곡)"
+            clearable
+            class="col-12 col-md-3"
+            prepend-inner-icon="location_on"
+            @keyup.enter="load()"
           />
           <q-select
             dense
@@ -209,21 +219,22 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
 import {
-  listRestaurants,
   createRestaurant,
-  updateRestaurant,
-  deleteRestaurant
+  deleteRestaurant,
+  listSearchRestaurants,
+  updateRestaurant
 } from '@/api/restaurantApi'
+import { useQuasar } from 'quasar'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const $q = useQuasar()
 const router = useRouter()
 
 const loading = ref(false)
 const search = ref('')
+const emdSearch = ref('')
 const rows = ref([])
 
 // 카테고리 필터
@@ -275,7 +286,8 @@ onMounted(load)
 async function load() {
   loading.value = true
   try {
-    rows.value = await listRestaurants(100)
+    const emd = emdSearch.value.trim() || ''
+    rows.value = await listSearchRestaurants(emd, 100)
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || '목록 조회 실패' })
   } finally {
