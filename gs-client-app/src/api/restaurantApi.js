@@ -11,6 +11,14 @@ export async function listRestaurants(limit = 100) {
     );
 }
 
+export async function listRandomRestaurants(limit = 100) {
+    const res = await httpRequest('/v3/restaurant/random', { params: { limit } });
+    const list = Array.isArray(res) ? res : res?.data ?? [];
+    return [...list].sort((a, b) =>
+        String(a.restaurantName || '').localeCompare(String(b.restaurantName || ''), 'ko')
+    );
+}
+
 /** v3 생성 */
 export async function createRestaurant(payload) {
     return httpRequest('/v3/restaurant/create', {
