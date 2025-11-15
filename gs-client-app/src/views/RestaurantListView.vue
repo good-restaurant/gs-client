@@ -109,7 +109,7 @@
                     text-color="white"
                     icon="local_dining"
                   >
-                    {{ r.category }}
+                    {{ CATEGORY_LABEL_MAP[r.category] || r.category }}
                   </q-chip>
                   <q-chip
                     v-if="r.lat && r.lon"
@@ -139,12 +139,16 @@
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
-import {
-  listRestaurants,
-  createRestaurant,
-  updateRestaurant,
-  deleteRestaurant
-} from '@/api/restaurantApi'
+import { listRandomRestaurants } from '@/api/restaurantApi'
+
+// 카테고리 정의
+const CATEGORY_LABEL_MAP = {
+  ETC: '기타',
+  KOREAN: '한식',
+  CHINESE: '중식',
+  JAPANESE: '일식',
+  WESTERN: '양식'
+}
 
 const $q = useQuasar()
 const router = useRouter()
@@ -163,7 +167,10 @@ const categoryOptions = computed(() => {
   const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'))
   return [
     { label: '전체 카테고리', value: 'all' },
-    ...list.map(c => ({ label: c, value: c }))
+    ...list.map(c => ({
+      label: CATEGORY_LABEL_MAP[c] || c,
+      value: c
+    }))
   ]
 })
 
@@ -191,7 +198,7 @@ onMounted(load)
 async function load() {
   loading.value = true
   try {
-    rows.value = await listRestaurants(100)
+    rows.value = await listRandomRestaurants(100)
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || '목록 조회 실패' })
   } finally {
