@@ -17,9 +17,6 @@
               <div class="text-h5 text-weight-bold text-primary">
                 모범음식점 목록
               </div>
-              <div class="text-body2 text-grey-8 q-mt-xs">
-                등록된 모범음식점 정보를 한눈에 보고, 새로 추가하거나 수정·삭제할 수 있는 페이지입니다.
-              </div>
             </div>
           </div>
 
@@ -28,13 +25,6 @@
             <q-chip square color="white" text-color="primary" icon="store" class="text-weight-medium">
               총 {{ rows.length }}곳
             </q-chip>
-            <q-btn
-              color="primary"
-              unelevated
-              icon="add"
-              label="새 모범음식점 추가"
-              @click="openCreate()"
-            />
           </div>
         </q-card-section>
       </q-card>
@@ -133,77 +123,14 @@
                   </q-chip>
                 </div>
               </q-item-section>
-
-              <!-- 액션 버튼 -->
-              <q-item-section side top>
-                <q-btn
-                  dense
-                  flat
-                  round
-                  icon="edit"
-                  @click.stop="openEdit(r)"
-                  :aria-label="`${r.restaurantName} 수정`"
-                />
-                <q-btn
-                  dense
-                  flat
-                  round
-                  icon="delete"
-                  color="negative"
-                  @click.stop="confirmDelete(r)"
-                  :aria-label="`${r.restaurantName} 삭제`"
-                />
-              </q-item-section>
             </q-item>
           </q-list>
 
           <div v-else-if="!loading" class="text-grey text-center q-mt-xl">
             표시할 데이터가 없습니다. <br />
-            상단의 <span class="text-primary text-weight-medium">[새 모범음식점 추가]</span> 버튼으로
-            첫 번째 모범음식점을 등록해 보세요.
           </div>
         </q-card-section>
       </q-card>
-
-      <!-- 생성/수정 다이얼로그 -->
-      <q-dialog v-model="dialog.open">
-        <q-card style="min-width: 380px; max-width: 90vw;">
-          <q-card-section class="text-h6">
-            {{ dialog.mode === 'create' ? '모범음식점 추가' : '모범음식점 수정' }}
-          </q-card-section>
-          <q-card-section class="q-gutter-md">
-            <q-input v-model="form.restaurantName" label="이름 *" outlined dense />
-            <q-input v-model="form.category" label="카테고리" outlined dense />
-            <q-input v-model="form.address" label="주소" outlined dense />
-            <div class="row q-col-gutter-sm">
-              <q-input
-                class="col"
-                v-model.number="form.lat"
-                type="number"
-                label="위도(lat)"
-                outlined
-                dense
-              />
-              <q-input
-                class="col"
-                v-model.number="form.lon"
-                type="number"
-                label="경도(lon)"
-                outlined
-                dense
-              />
-            </div>
-          </q-card-section>
-          <q-card-actions align="right">
-            <q-btn flat label="취소" v-close-popup />
-            <q-btn
-              color="primary"
-              :label="dialog.mode === 'create' ? '추가' : '수정'"
-              @click="submitDialog"
-            />
-          </q-card-actions>
-        </q-card>
-      </q-dialog>
     </div>
   </q-page>
 </template>
@@ -238,17 +165,6 @@ const categoryOptions = computed(() => {
     { label: '전체 카테고리', value: 'all' },
     ...list.map(c => ({ label: c, value: c }))
   ]
-})
-
-// 다이얼로그 상태
-const dialog = ref({ open: false, mode: 'create', target: null })
-const form = ref({
-  id: null,
-  restaurantName: '',
-  category: '',
-  address: '',
-  lat: null,
-  lon: null
 })
 
 const filtered = computed(() => {
@@ -286,79 +202,6 @@ async function load() {
 function goDetail(id) {
   if (!id) return
   router.push({ name: 'restaurant-detail', params: { id } })
-}
-
-function openCreate() {
-  dialog.value = { open: true, mode: 'create', target: null }
-  form.value = {
-    id: null,
-    restaurantName: '',
-    category: '',
-    address: '',
-    lat: null,
-    lon: null
-  }
-}
-
-function openEdit(row) {
-  dialog.value = { open: true, mode: 'edit', target: row }
-  form.value = {
-    id: row.id ?? null,
-    restaurantName: row.restaurantName ?? '',
-    category: row.category ?? '',
-    address: row.address ?? '',
-    lat: row.lat ?? null,
-    lon: row.lon ?? null
-  }
-}
-
-async function submitDialog() {
-  try {
-    const payload = {
-      // 백엔드 스키마와 맞추기: 없는 필드는 안전한 기본값으로 전송
-      id: form.value.id ?? undefined,
-      restaurantName: form.value.restaurantName,
-      address: form.value.address,
-      category: form.value.category,
-      menu: '',
-      phoneNumber: '',
-      lon: form.value.lon ?? 0,
-      lat: form.value.lat ?? 0,
-      ctpKorNm: '',
-      sigKorNm: '',
-      emdKorNm: ''
-    }
-
-    if (dialog.value.mode === 'create') {
-      await createRestaurant(payload)
-      $q.notify({ type: 'positive', message: '등록되었습니다.' })
-    } else {
-      await updateRestaurant(payload)
-      $q.notify({ type: 'positive', message: '수정되었습니다.' })
-    }
-
-    dialog.value.open = false
-    await load()
-  } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || '요청 실패' })
-  }
-}
-
-function confirmDelete(row) {
-  $q.dialog({
-    title: '삭제 확인',
-    message: `[${row.restaurantName}] 항목을 삭제할까요?`,
-    cancel: true,
-    persistent: true
-  }).onOk(async () => {
-    try {
-      await deleteRestaurant(row.id)
-      $q.notify({ type: 'positive', message: '삭제되었습니다.' })
-      await load()
-    } catch (e) {
-      $q.notify({ type: 'negative', message: e.message || '삭제 실패' })
-    }
-  })
 }
 </script>
 
