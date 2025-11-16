@@ -101,3 +101,47 @@ export async function getPictureSignedUrl(pictureId) {
         `/v1/signed-download/${encodeURIComponent(pictureId)}`
     );
 }
+
+/** 댓글 생성 */
+export async function createComment({ restaurantId, content, rating = 0, displayName }) {
+    // 백엔드 Example: { content, rating, restaurant: { id } ... }
+    const body = {
+        content,
+        rating,
+        ...(displayName ? { displayName } : {}),
+        restaurant: { id: restaurantId },
+    };
+    return httpRequest('/restaurant-comment', {
+        method: 'POST',
+        body,
+    });
+}
+
+/** 댓글 수정 */
+export async function updateComment(id, { content, rating = 0, displayName }) {
+    const body = { content, rating, ...(displayName ? { displayName } : {}) };
+    return httpRequest(`/restaurant-comment/${encodeURIComponent(id)}`, {
+        method: 'PUT',
+        body,
+    });
+}
+
+/** 댓글 삭제 */
+export async function deleteComment(id) {
+    return httpRequest(`/restaurant-comment/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+    });
+}
+
+/** 식당의 댓글 목록 조회 (pageable 사용) */
+export async function getRestaurantComments(restaurantId, { page = 0, size = 10, sort = 'createdAt,desc' } = {}) {
+    // swagger상 pageable은 query로 전달
+    return httpRequest(`/restaurant-comment/view/${encodeURIComponent(restaurantId)}`, {
+        params: { page, size, sort },
+    });
+}
+
+/** 댓글 단건 조회 */
+export async function getCommentById(id) {
+    return httpRequest(`/restaurant-comment/view-comment/${encodeURIComponent(id)}`);
+}

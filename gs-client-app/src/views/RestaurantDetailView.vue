@@ -95,6 +95,10 @@
                     등록된 사진이 없습니다.
                 </div>
             </q-card-section>
+
+            <q-card-section>
+                <CommentsPanel :restaurant-id="restaurantId" />
+            </q-card-section>
         </q-card>
     </q-page>
 </template>
@@ -108,6 +112,7 @@ import {
     uploadRestaurantPicture,
     getPictureSignedUrl
 } from '@/api/restaurantApi'
+import CommentsPanel from '@/components/CommentsPanel.vue'
 
 const $q = useQuasar()
 const route = useRoute()
