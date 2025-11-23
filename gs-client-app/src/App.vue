@@ -19,23 +19,16 @@
           <q-btn flat icon="map" label="지도 보기" :to="{ name: 'map' }" />
           <q-btn flat icon="admin_panel_settings" label="관리자" :to="{ name: 'admin' }" />
         </div>
-
-        <q-separator vertical spaced class="gt-sm" />
-
-        <!-- 다크모드 토글 -->
-        <q-btn round dense :icon="dark ? 'dark_mode' : 'light_mode'" @click="dark = !dark" aria-label="테마 전환">
-          <q-tooltip>{{ dark ? '다크 모드' : '라이트 모드' }}</q-tooltip>
-        </q-btn>
       </q-toolbar>
     </q-header>
 
     <!-- 좌측 드로어(모바일 기본 닫힘, 데스크톱 기본 열림) -->
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="260">
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered :width="260" class="bg-blue-1 text-dark">
       <q-list padding>
-        <q-item-label header class="text-grey-7">메뉴</q-item-label>
+        <q-item-label header class="text-grey-8">메뉴</q-item-label>
 
         <q-item v-for="it in navs" :key="it.name" :to="{ name: it.name }" clickable v-ripple
-          :active="route.name === it.name" active-class="bg-primary text-white">
+          :active="route.name === it.name" active-class="bg-primary text-white" class="drawer-item">
           <q-item-section avatar>
             <q-icon :name="it.icon" />
           </q-item-section>
@@ -43,9 +36,8 @@
         </q-item>
       </q-list>
 
-      <!-- 드로어 하단 간단 소개 -->
-      <q-separator spaced />
-      <div class="q-pa-md text-caption text-grey-6">
+      <q-separator spaced class="bg-grey-3" />
+      <div class="q-pa-md text-caption text-grey-7">
         주변 모범음식점을 한눈에 찾는
         <span class="text-primary text-weight-medium">GoodRestaurant</span>
         입니다.
@@ -75,7 +67,7 @@
 
 <script setup>
 import { useQuasar } from 'quasar'
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const $q = useQuasar()
@@ -86,10 +78,6 @@ const router = useRouter()
 const leftDrawerOpen = ref($q.screen.gt.sm)
 const toggleLeftDrawer = () => (leftDrawerOpen.value = !leftDrawerOpen.value)
 const goHome = () => router.push({ name: 'home' })
-
-// 다크 모드 토글
-const dark = ref($q.dark.isActive)
-watch(dark, v => $q.dark.set(v))
 
 // 네비게이션 정의 (라우트 name과 반드시 일치하게)
 const navs = [
@@ -129,5 +117,21 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' })
 <style scoped>
 .cursor-pointer {
   cursor: pointer;
+}
+
+.drawer-item {
+  transition: background-color .12s ease;
+}
+
+.drawer-item:not(.bg-primary):hover {
+  background-color: rgba(0, 0, 0, .04);
+}
+
+.drawer-item:not(.bg-primary) .q-item__section--main {
+  color: rgba(0, 0, 0, .86);
+}
+
+.drawer-item:not(.bg-primary) .q-icon {
+  color: rgba(0, 0, 0, .64);
 }
 </style>
