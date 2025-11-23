@@ -6,8 +6,6 @@
       <!-- 상단 히어로 / 요약 영역 -->
       <q-card flat bordered class="list-hero">
         <q-card-section class="row items-center justify-between no-wrap">
-
-          <!-- 왼쪽: 아이콘 + 텍스트 -->
           <div class="row items-center q-gutter-md">
             <q-avatar
               size="56px"
@@ -25,7 +23,6 @@
             </div>
           </div>
 
-          <!-- 오른쪽: 요약 정보 -->
           <div class="column items-end q-gutter-sm">
             <q-chip
               square
@@ -53,11 +50,8 @@
             class="col-12 col-md-5"
             prepend-inner-icon="search"
             @keyup.enter="triggerSearch"
-          >
-            <template #append>
-              <q-spinner v-if="searching || loading" size="16px" />
-            </template>
-          </q-input>
+          />
+          <!-- ↑ 검색창 내부 스피너 제거 -->
 
           <q-select
             dense
@@ -77,7 +71,9 @@
               <q-icon name="filter_list" />
             </template>
           </q-select>
+
           <q-space />
+
           <q-btn
             flat
             icon="refresh"
@@ -85,6 +81,57 @@
             @click="load"
             :disable="loading || searching"
           />
+        </q-card-section>
+
+        <!-- 최근 검색어 영역 (칩 UI) -->
+        <q-card-section
+          v-if="recentSearches.length"
+          class="recent-section q-pt-sm q-pb-sm"
+        >
+          <div class="row items-center no-wrap">
+            <!-- 왼쪽: 칩들 -->
+            <div class="col">
+              <div class="row items-center q-gutter-xs recent-chip-row">
+                <q-chip
+                  v-for="keyword in recentSearches"
+                  :key="keyword"
+                  dense
+                  clickable
+                  outline
+                  color="primary"
+                  text-color="primary"
+                  class="recent-chip"
+                  @click="applyRecent(keyword)"
+                >
+                  <q-icon
+                    name="history"
+                    size="14px"
+                    class="q-mr-xs text-grey-6"
+                  />
+                  <span class="ellipsis">{{ keyword }}</span>
+                  <q-icon
+                    name="close"
+                    size="14px"
+                    class="q-ml-xs text-grey-5"
+                    @click.stop="removeRecent(keyword)"
+                  />
+                </q-chip>
+              </div>
+            </div>
+
+            <!-- 오른쪽: 전체 삭제 버튼 -->
+            <div class="col-auto">
+              <q-btn
+                flat
+                dense
+                size="sm"
+                class="text-primary"
+                icon="delete_outline"
+                label="전체 삭제"
+                @click="clearRecent"
+              />
+            </div>
+          </div>
         </q-card-section>
 
         <q-separator spaced />
@@ -110,7 +157,11 @@
             >
               <!-- 번호 -->
               <q-item-section side class="gt-sm">
-                <q-badge color="grey-3" text-color="grey-8" class="text-weight-medium">
+                <q-badge
+                  color="grey-3"
+                  text-color="grey-8"
+                  class="text-weight-medium"
+                >
                   {{ idx + 1 }}
                 </q-badge>
               </q-item-section>
@@ -179,6 +230,9 @@ const CATEGORY_LABEL_MAP = {
   WESTERN: '양식'
 }
 
+// 최근 검색어 저장 키
+const RECENT_SEARCH_KEY = 'goodrestaurant_recent_searches'
+
 const $q = useQuasar()
 const router = useRouter()
 
@@ -188,6 +242,9 @@ const search = ref('')
 const rows = ref([])
 
 const searchDebounceTimer = ref(null)
+
+// 최근 검색어 목록
+const recentSearches = ref([])
 
 // 카테고리 필터
 const categoryFilter = ref('all')
@@ -250,7 +307,10 @@ const filtered = computed(() => {
   })
 })
 
-onMounted(load)
+onMounted(() => {
+  loadRecentSearches()
+  load()
+})
 
 watch(search, async v => {
   const raw = v ?? ''
@@ -291,9 +351,12 @@ async function triggerSearch() {
 async function load() {
   loading.value = true
   try {
-    const q = (search.value ?? '').trim()
+    const qRaw = search.value ?? ''
+    const q = qRaw.trim()
+
     if (q) {
       rows.value = await searchRestaurants(q, 100)
+      addRecentSearch(q) // 검색 성공 시 최근 검색어에 추가
     } else {
       rows.value = await listRandomRestaurants(100)
     }
@@ -308,6 +371,58 @@ function goDetail(id) {
   if (!id) return
   router.push({ name: 'restaurant-detail', params: { id } })
 }
+
+/* ========= 최근 검색어 관련 함수들 ========= */
+
+function loadRecentSearches() {
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCH_KEY)
+    const data = raw ? JSON.parse(raw) : []
+    if (Array.isArray(data)) {
+      recentSearches.value = data
+    }
+  } catch (e) {
+    recentSearches.value = []
+  }
+}
+
+function saveRecentSearches() {
+  try {
+    localStorage.setItem(
+      RECENT_SEARCH_KEY,
+      JSON.stringify(recentSearches.value)
+    )
+  } catch (e) {
+    // 로컬스토리지 막혀 있어도 앱이 깨지진 않게 무시
+  }
+}
+
+function addRecentSearch(keyword) {
+  const k = keyword.trim()
+  if (!k) return
+
+  const list = recentSearches.value.filter(item => item !== k)
+  list.unshift(k)
+  recentSearches.value = list.slice(0, 10) // 최대 10개까지
+  saveRecentSearches()
+}
+
+function applyRecent(keyword) {
+  search.value = keyword
+  triggerSearch()
+}
+
+function removeRecent(keyword) {
+  recentSearches.value = recentSearches.value.filter(k => k !== keyword)
+  saveRecentSearches()
+}
+
+function clearRecent() {
+  recentSearches.value = []
+  saveRecentSearches()
+}
+
+/* ========= 하이라이트 관련 ========= */
 
 function escapeHtml(str) {
   return String(str ?? '')
@@ -359,5 +474,29 @@ function highlight(text) {
 
 .restaurant-item:hover {
   background-color: #f5f7fb;
+}
+
+/* 최근 검색어 영역 */
+.recent-section {
+  margin-top: 4px;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.recent-chip-row {
+  flex-wrap: wrap;
+}
+
+.recent-chip {
+  max-width: 180px;
+  background-color: #ffffff;
+}
+
+.ellipsis {
+  display: inline-block;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
