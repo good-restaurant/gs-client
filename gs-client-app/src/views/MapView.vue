@@ -9,58 +9,31 @@
                     <!-- 상단 검색 영역 전체 -->
                     <div class="row items-center q-col-gutter-sm justify-between">
 
-                    <!-- 도로명 주소 입력 -->
-                    <div class="col-12 col-md-12 no-wrap">
-                        <q-input
-                        v-model="address"
-                        dense outlined clearable
-                        label="주변 모범음식점 검색"
-                        placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
-                        @keyup.enter="handleSearch"
-                        style="width: 100%"
-                        >
-                        <template #prepend>
-                            <q-icon name="place" />
-                        </template>
-                        </q-input>
-                    </div>
+                        <!-- 도로명 주소 입력 -->
+                        <div class="col-12 col-md-12 no-wrap">
+                            <q-input v-model="address" dense outlined clearable label="주변 모범음식점 검색"
+                                placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch"
+                                style="width: 100%">
+                                <template #prepend>
+                                    <q-icon name="place" />
+                                </template>
+                            </q-input>
+                        </div>
 
-                    <!-- 버튼 및 선택 박스 영역 -->
-                    <div class="col-12 col-md-12 row items-center justify-between">
-                        <q-btn
-                        color="primary"
-                        dense
-                        icon="search"
-                        label="검색"
-                        class="col-6 col-md-3"
-                        @click="handleSearch"
-                        />
-                        <q-btn
-                        color="secondary"
-                        dense
-                        icon="my_location"
-                        label="현재위치"
-                        class="col-6 col-md-3"
-                        @click="handleCurrentLocation"
-                        />
-                        <q-select
-                        v-model="radius"
-                        :options="radiusOptions"
-                        dense outlined emit-value map-options
-                        label="반경"
-                        class="col-6 col-md-3 q-gutter-md"
-                        />
-                        <q-select
-                        v-model="limit"
-                        :options="limitOptions"
-                        dense outlined emit-value map-options
-                        label="개수"
-                        class="col-6 col-md-3 q-gutter-md"
-                        />
-                    </div>
+                        <!-- 버튼 및 선택 박스 영역 -->
+                        <div class="col-12 col-md-12 row items-center justify-between">
+                            <q-btn color="primary" dense icon="search" label="검색" class="col-6 col-md-3"
+                                @click="handleSearch" />
+                            <q-btn color="secondary" dense icon="my_location" label="현재위치" class="col-6 col-md-3"
+                                @click="handleCurrentLocation" />
+                            <q-select v-model="radius" :options="radiusOptions" dense outlined emit-value map-options
+                                label="반경" class="col-6 col-md-3 q-gutter-md" />
+                            <q-select v-model="limit" :options="limitOptions" dense outlined emit-value map-options
+                                label="개수" class="col-6 col-md-3 q-gutter-md" />
+                        </div>
                     </div>
                 </q-card-section>
-                </q-card>
+            </q-card>
 
             <!-- 지도 카드 -->
             <q-card flat bordered>
@@ -200,7 +173,7 @@ function clearCurrentLocationMarker() {
 // 현재 위치 마커 표시
 function showCurrentLocationMarker(lat, lon) {
     clearCurrentLocationMarker()
-    
+
     currentLocationMarker = new globalThis.naver.maps.Marker({
         position: new globalThis.naver.maps.LatLng(lat, lon),
         map,
@@ -219,7 +192,7 @@ function showCurrentLocationMarker(lat, lon) {
             anchor: new globalThis.naver.maps.Point(10, 10)
         }
     })
-    
+
     // 현재 위치로 지도 이동
     map.setCenter(new globalThis.naver.maps.LatLng(lat, lon))
     map.setZoom(15)
@@ -383,11 +356,15 @@ function updateMapWithRestaurants(list) {
 
         const contentHtml =
             `<div style="padding:8px; line-height:1.4;">
-        <div style="font-weight:600; margin-bottom:4px;">${escapeHtml(
-                r.restaurantName || ''
-            )}</div>
-        <div style="color:#666;">${escapeHtml(r.address || '')}</div>
-      </div>`
+    <div style="font-weight:600; margin-bottom:4px;">${escapeHtml(r.restaurantName || '')}</div>
+    <div style="color:#666;">${escapeHtml(r.address || '')}</div>
+    <div style="margin-top:8px;">
+      <a
+        href="/restaurants/${encodeURIComponent(r.id)}"
+        style="display:inline-block;padding:6px 10px;background:#1976d2;color:#fff;border-radius:4px;text-decoration:none;"
+      >상세 페이지 이동하기</a>
+    </div>
+  </div>`
 
         globalThis.naver.maps.Event.addListener(marker, 'click', () => {
             infoWindow.setContent(contentHtml)
