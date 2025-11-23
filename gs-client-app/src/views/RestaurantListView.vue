@@ -6,10 +6,13 @@
       <!-- 상단 히어로 / 요약 영역 -->
       <q-card flat bordered class="list-hero">
         <q-card-section class="row items-center justify-between no-wrap">
-
-          <!-- 왼쪽: 아이콘 + 텍스트 -->
           <div class="row items-center q-gutter-md">
-            <q-avatar size="56px" color="primary" text-color="white" class="list-hero__avatar">
+            <q-avatar
+              size="56px"
+              color="primary"
+              text-color="white"
+              class="list-hero__avatar"
+            >
               <q-icon name="restaurant" size="30px" />
             </q-avatar>
 
@@ -20,9 +23,14 @@
             </div>
           </div>
 
-          <!-- 오른쪽: 요약 정보 + 추가 버튼 -->
           <div class="column items-end q-gutter-sm">
-            <q-chip square color="white" text-color="primary" icon="store" class="text-weight-medium">
+            <q-chip
+              square
+              color="white"
+              text-color="primary"
+              icon="store"
+              class="text-weight-medium"
+            >
               총 {{ rows.length }}곳
             </q-chip>
           </div>
@@ -41,7 +49,10 @@
             clearable
             class="col-12 col-md-5"
             prepend-inner-icon="search"
+            @keyup.enter="triggerSearch"
           />
+          <!-- ↑ 검색창 내부 스피너 제거 -->
+
           <q-select
             dense
             outlined
@@ -54,20 +65,79 @@
             :option-value="opt => opt.value"
             clear-icon="close"
             label="카테고리 필터"
+            :disable="loading || searching"
           >
             <template #prepend>
               <q-icon name="filter_list" />
             </template>
           </q-select>
+
           <q-space />
-          <q-btn flat icon="refresh" label="새로고침" @click="load()" />
+
+          <q-btn
+            flat
+            icon="refresh"
+            label="새로고침"
+            @click="load"
+            :disable="loading || searching"
+          />
+        </q-card-section>
+
+        <!-- 최근 검색어 영역 (칩 UI) -->
+        <q-card-section
+          v-if="recentSearches.length"
+          class="recent-section q-pt-sm q-pb-sm"
+        >
+          <div class="row items-center no-wrap">
+            <!-- 왼쪽: 칩들 -->
+            <div class="col">
+              <div class="row items-center q-gutter-xs recent-chip-row">
+                <q-chip
+                  v-for="keyword in recentSearches"
+                  :key="keyword"
+                  dense
+                  clickable
+                  outline
+                  color="primary"
+                  text-color="primary"
+                  class="recent-chip"
+                  @click="applyRecent(keyword)"
+                >
+                  <q-icon
+                    name="history"
+                    size="14px"
+                    class="q-mr-xs text-grey-6"
+                  />
+                  <span class="ellipsis">{{ keyword }}</span>
+                  <q-icon
+                    name="close"
+                    size="14px"
+                    class="q-ml-xs text-grey-5"
+                    @click.stop="removeRecent(keyword)"
+                  />
+                </q-chip>
+              </div>
+            </div>
+
+            <!-- 오른쪽: 전체 삭제 버튼 -->
+            <div class="col-auto">
+              <q-btn
+                flat
+                dense
+                size="sm"
+                class="text-primary"
+                icon="delete_outline"
+                label="전체 삭제"
+                @click="clearRecent"
+              />
+            </div>
+          </div>
         </q-card-section>
 
         <q-separator spaced />
 
         <!-- 리스트 영역 -->
         <q-card-section class="q-pt-none">
-
           <q-inner-loading :showing="loading">
             <q-spinner size="50px" />
           </q-inner-loading>
@@ -87,19 +157,26 @@
             >
               <!-- 번호 -->
               <q-item-section side class="gt-sm">
-                <q-badge color="grey-3" text-color="grey-8" class="text-weight-medium">
+                <q-badge
+                  color="grey-3"
+                  text-color="grey-8"
+                  class="text-weight-medium"
+                >
                   {{ idx + 1 }}
                 </q-badge>
               </q-item-section>
 
               <!-- 본문 -->
               <q-item-section>
-                <q-item-label class="text-weight-medium text-body1">
-                  {{ r.restaurantName || '이름 없음' }}
-                </q-item-label>
-                <q-item-label caption class="text-grey-7 q-mt-xs">
-                  {{ r.address || '-' }}
-                </q-item-label>
+                <q-item-label
+                  class="text-weight-medium text-body1"
+                  v-html="highlight(r.restaurantName || '이름 없음')"
+                />
+                <q-item-label
+                  caption
+                  class="text-grey-7 q-mt-xs"
+                  v-html="highlight(r.address || '-')"
+                />
                 <div class="row items-center q-gutter-xs q-mt-xs">
                   <q-chip
                     v-if="r.category"
@@ -136,10 +213,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
-import { listRandomRestaurants } from '@/api/restaurantApi'
+import {
+  listRandomRestaurants,
+  searchRestaurants
+} from '@/api/restaurantApi'
 
 // 카테고리 정의
 const CATEGORY_LABEL_MAP = {
@@ -150,12 +230,21 @@ const CATEGORY_LABEL_MAP = {
   WESTERN: '양식'
 }
 
+// 최근 검색어 저장 키
+const RECENT_SEARCH_KEY = 'goodrestaurant_recent_searches'
+
 const $q = useQuasar()
 const router = useRouter()
 
 const loading = ref(false)
+const searching = ref(false)
 const search = ref('')
 const rows = ref([])
+
+const searchDebounceTimer = ref(null)
+
+// 최근 검색어 목록
+const recentSearches = ref([])
 
 // 카테고리 필터
 const categoryFilter = ref('all')
@@ -175,10 +264,10 @@ const categoryOptions = computed(() => {
 })
 
 const filtered = computed(() => {
-  const q = search.value.trim().toLowerCase()
+  const q = (search.value ?? '').trim().toLowerCase()
   const cat = categoryFilter.value
 
-  return rows.value.filter(r => {
+  const filteredList = rows.value.filter(r => {
     const name = (r.restaurantName || '').toLowerCase()
     const category = (r.category || '').toLowerCase()
     const addr = (r.address || '').toLowerCase()
@@ -191,14 +280,86 @@ const filtered = computed(() => {
 
     return matchSearch && matchCategory
   })
+
+  // 이름 매칭 → 주소 매칭 → 그 외, 각 그룹 내에서는 이름 가나다순
+  return filteredList.sort((a, b) => {
+    const qLower = q
+
+    const aName = (a.restaurantName || '').toLowerCase()
+    const bName = (b.restaurantName || '').toLowerCase()
+    const aAddr = (a.address || '').toLowerCase()
+    const bAddr = (b.address || '').toLowerCase()
+
+    const aMatchName = qLower && aName.includes(qLower)
+    const bMatchName = qLower && bName.includes(qLower)
+    if (aMatchName && !bMatchName) return -1
+    if (!aMatchName && bMatchName) return 1
+
+    const aMatchAddr = qLower && aAddr.includes(qLower)
+    const bMatchAddr = qLower && bAddr.includes(qLower)
+    if (aMatchAddr && !bMatchAddr) return -1
+    if (!aMatchAddr && bMatchAddr) return 1
+
+    return String(a.restaurantName || '').localeCompare(
+      String(b.restaurantName || ''),
+      'ko'
+    )
+  })
 })
 
-onMounted(load)
+onMounted(() => {
+  loadRecentSearches()
+  load()
+})
+
+watch(search, async v => {
+  const raw = v ?? ''
+  const text = raw.trim()
+
+  // X 버튼 등으로 완전히 비워졌을 때
+  if (!raw) {
+    if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+    searching.value = false
+    await load()
+    return
+  }
+
+  if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+  searching.value = true
+  searchDebounceTimer.value = setTimeout(async () => {
+    await load()
+    searching.value = false
+  }, 1000)
+})
+
+async function triggerSearch() {
+  const text = (search.value ?? '').trim()
+
+  if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+
+  if (!text) {
+    searching.value = false
+    await load()
+    return
+  }
+
+  searching.value = true
+  await load()
+  searching.value = false
+}
 
 async function load() {
   loading.value = true
   try {
-    rows.value = await listRandomRestaurants(100)
+    const qRaw = search.value ?? ''
+    const q = qRaw.trim()
+
+    if (q) {
+      rows.value = await searchRestaurants(q, 100)
+      addRecentSearch(q) // 검색 성공 시 최근 검색어에 추가
+    } else {
+      rows.value = await listRandomRestaurants(100)
+    }
   } catch (e) {
     $q.notify({ type: 'negative', message: e.message || '목록 조회 실패' })
   } finally {
@@ -209,6 +370,90 @@ async function load() {
 function goDetail(id) {
   if (!id) return
   router.push({ name: 'restaurant-detail', params: { id } })
+}
+
+/* ========= 최근 검색어 관련 함수들 ========= */
+
+function loadRecentSearches() {
+  try {
+    const raw = localStorage.getItem(RECENT_SEARCH_KEY)
+    const data = raw ? JSON.parse(raw) : []
+    if (Array.isArray(data)) {
+      recentSearches.value = data
+    }
+  } catch (e) {
+    recentSearches.value = []
+  }
+}
+
+function saveRecentSearches() {
+  try {
+    localStorage.setItem(
+      RECENT_SEARCH_KEY,
+      JSON.stringify(recentSearches.value)
+    )
+  } catch (e) {
+    // 로컬스토리지 막혀 있어도 앱이 깨지진 않게 무시
+  }
+}
+
+function addRecentSearch(keyword) {
+  const k = keyword.trim()
+  if (!k) return
+
+  const list = recentSearches.value.filter(item => item !== k)
+  list.unshift(k)
+  recentSearches.value = list.slice(0, 10) // 최대 10개까지
+  saveRecentSearches()
+}
+
+function applyRecent(keyword) {
+  search.value = keyword
+  triggerSearch()
+}
+
+function removeRecent(keyword) {
+  recentSearches.value = recentSearches.value.filter(k => k !== keyword)
+  saveRecentSearches()
+}
+
+function clearRecent() {
+  recentSearches.value = []
+  saveRecentSearches()
+}
+
+/* ========= 하이라이트 관련 ========= */
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function highlight(text) {
+  const base = text ?? ''
+  const q = (search.value ?? '').trim()
+  if (!q) return escapeHtml(base)
+
+  const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escapedQuery, 'gi')
+  const matches = base.match(regex)
+  if (!matches) return escapeHtml(base)
+
+  const parts = base.split(regex)
+  let result = ''
+  parts.forEach((part, idx) => {
+    result += escapeHtml(part)
+    if (idx < matches.length) {
+      result += `<span class="text-negative text-weight-bold">${escapeHtml(
+        matches[idx]
+      )}</span>`
+    }
+  })
+  return result
 }
 </script>
 
@@ -229,5 +474,29 @@ function goDetail(id) {
 
 .restaurant-item:hover {
   background-color: #f5f7fb;
+}
+
+/* 최근 검색어 영역 */
+.recent-section {
+  margin-top: 4px;
+  border-radius: 8px;
+  background-color: #fafafa;
+}
+
+.recent-chip-row {
+  flex-wrap: wrap;
+}
+
+.recent-chip {
+  max-width: 180px;
+  background-color: #ffffff;
+}
+
+.ellipsis {
+  display: inline-block;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

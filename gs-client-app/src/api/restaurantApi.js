@@ -76,6 +76,16 @@ export async function getRestaurantsByEmd(emd, limit = 20) {
     });
 }
 
+/** v3 통합 검색 기능 /v3/restaurant/search */
+export async function searchRestaurants(searchQuery, limit = 100) {
+    const res = await httpRequest('/v3/restaurant/search', {
+        params: { searchQuery, limit },
+    });
+
+    const list = Array.isArray(res) ? res : res?.data ?? [];
+    return list;
+}
+
 // 필요하면 getRestaurantById 를 그대로 쓸 수 있게, 기존 v3 단건 조회를 래핑
 export async function getRestaurantById(id) {
     return getRestaurant(id);
