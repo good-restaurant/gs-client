@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-pa-md bg-grey-1">
+  <q-page class="q-pa-md bg-white">
     <div class="column q-gutter-md">
 
       <!-- 헤더 / 히어로 카드 -->

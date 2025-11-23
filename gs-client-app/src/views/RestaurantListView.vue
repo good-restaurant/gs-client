@@ -1,6 +1,6 @@
 <!-- src/views/RestaurantListView.vue -->
 <template>
-  <q-page class="q-pa-md bg-grey-1">
+  <q-page class="q-pa-md bg-white">
     <div class="column q-gutter-md">
 
       <!-- 상단 히어로 / 요약 영역 -->
