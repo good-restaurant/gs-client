@@ -1,9 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { keycloak } from '../keycloak'
+import AdminView from '../views/AdminView.vue'
 import HomeView from '../views/HomeView.vue'
-import RestaurantListView from '../views/RestaurantListView.vue'
 import MapView from '../views/MapView.vue'
 import RestaurantDetailView from '../views/RestaurantDetailView.vue'
-import AdminView from '../views/AdminView.vue'
+import RestaurantListView from '../views/RestaurantListView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -31,7 +32,26 @@ const router = createRouter({
     {
       path: '/admin',
       name: 'admin',
-      component: AdminView
+      component: AdminView,
+      beforeEnter: async (to, from, next) => {
+        if (!keycloak) {
+          console.error('Keycloak instance is not initialized')
+          return next(false)
+        }
+
+        if (!keycloak.authenticated) {
+          try {
+            await keycloak.login({
+              redirectUri: `${globalThis.location.origin}${to.fullPath}`
+            })
+          } catch (err) {
+            console.error('Keycloak login failed', err)
+            return next(false)
+          }
+        }
+
+        next()
+      }
     }
   ]
 })
