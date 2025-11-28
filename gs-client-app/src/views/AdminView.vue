@@ -194,15 +194,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
 import {
-  listRestaurants, // TODO: listRandomRestaurants 사용 시 삭제 필요
+  createRestaurant
+} from '@/api/authRestaurantApi'
+import {
+  deleteRestaurant, // TODO: listRandomRestaurants 사용 시 삭제 필요
   listRandomRestaurants,
-  createRestaurant,
-  updateRestaurant,
-  deleteRestaurant,
+  updateRestaurant
 } from '@/api/restaurantApi'
+import { useQuasar } from 'quasar'
+import { computed, onMounted, ref } from 'vue'
 
 const $q = useQuasar()
 
