@@ -1,15 +1,14 @@
-<!-- src/views/MapView.vue -->
 <template>
     <q-page class="q-pa-md bg-white">
         <div class="column q-gutter-md">
 
-            <!-- 상단 검색 카드 -->
+            //상단 검색 카드
             <q-card flat bordered>
                 <q-card-section>
-                    <!-- 상단 검색 영역 전체 -->
+                    //상단 검색 영역 전체
                     <div class="row items-center q-col-gutter-sm justify-between">
 
-                        <!-- 도로명 주소 입력 -->
+                       //도로명 주소 입력
                         <div class="col-12 col-md-12 no-wrap">
                             <q-input v-model="address" dense outlined clearable label="주변 모범음식점 검색"
                                 placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch"
@@ -20,7 +19,7 @@
                             </q-input>
                         </div>
 
-                        <!-- 버튼 및 선택 박스 영역 -->
+                        //버튼 및 선택 박스 영역
                         <div class="col-12 col-md-12 row items-center justify-between">
                             <q-btn color="primary" dense icon="search" label="검색" class="col-6 col-md-3"
                                 @click="handleSearch" />
@@ -35,13 +34,13 @@
                 </q-card-section>
             </q-card>
 
-            <!-- 지도 카드 -->
+            //지도 카드
             <q-card flat bordered>
                 <q-card-section class="q-pa-none">
                     <div class="relative-position" style="width: 100%; height: 70vh;">
                         <div id="map" style="width: 100%; height: 100%;"></div>
 
-                        <!-- 로딩 스피너 -->
+                        //로딩 스피너
                         <q-inner-loading :showing="loading">
                             <q-spinner size="42px" />
                             <div class="q-mt-sm">지도를 불러오는 중...</div>
@@ -58,6 +57,7 @@
 import { getNearbyRestaurants, getRestaurantsByLocation } from '@/api/restaurantApi'
 import { useQuasar } from 'quasar'
 import { onMounted, ref } from 'vue'
+import proj4 from "proj4"
 
 const $q = useQuasar()
 
@@ -154,6 +154,69 @@ function initMap() {
     })
 
     infoWindow = new globalThis.naver.maps.InfoWindow({ anchorSkew: true })
+
+  //========================================================================
+  // GeoServer WMS Overlay
+
+  const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
+
+  proj4.defs(
+      "EPSG:5186",
+      "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs"
+  )
+
+
+  const wmsOverlay = new globalThis.naver.maps.ImageMapType({
+    getTileUrl: function(coord, zoom) {
+      const tileSize = 256
+
+      // // 좌표 -> 지도 LatLng 변환
+      // const nw = map.getProjection().fromCoordToLatLng(
+      //     new globalThis.naver.maps.Point(coord.x * tileSize, coord.y * tileSize)
+      // )
+      // const se = map.getProjection().fromCoordToLatLng(
+      //     new globalThis.naver.maps.Point((coord.x + 1) * tileSize, (coord.y + 1) * tileSize)
+      // )
+      //
+      // // bbox: WMS 요청용
+      // // 위경도 -> EPSG:5186
+      // const nw5186 = proj4("EPSG:4326", "EPSG:5186", [nw.lng(), nw.lat()])
+      // const se5186 = proj4("EPSG:4326", "EPSG:5186", [se.lng(), se.lat()])
+      //
+      // // BBOX 생성 (minX, minY, maxX, maxY)
+      // const bbox = [
+      //   nw5186[0],  // minX
+      //   se5186[1],  // minY
+      //   se5186[0],  // maxX
+      //   nw5186[1]   // maxY
+      // ].join(",")
+      const bbox = "179187.238943511,537124.364378947,216246.233627722,566866.044297778"
+
+      // WMS GetMap 요청 URL
+      return `${wmsUrl}?service=WMS&version=1.1.0&request=GetMap` +
+          `&layers=test_geoserver:seoul_group` +
+          `&styles=` +
+          `&format=image/png` +
+          `&transparent=true` +
+          `&srs=EPSG:5186` +
+          `&bbox=${bbox}` +
+          `&width=${tileSize}&height=${tileSize}`
+    },
+    tileSize: new naver.maps.Size(768, 616),
+    opacity: 0.6,
+    name: 'WMS Layer',
+    minZoom: 6,
+    maxZoom: 20,
+    projection: naver.maps.EPSG3857
+  })
+
+  // WMS 레이어를 별도 지도 타입으로 등록
+  map.mapTypes.set('WMS_LAYER', wmsOverlay)
+
+  // 기본 지도 + WMS를 동시에 보려면 custom overlay 사용
+  map.setMapTypeId('normal') // 기본 지도 유지
+  // WMS를 커스텀 오버레이로 추가
+  map.overlayMapTypes = [wmsOverlay]
 }
 
 // 기존 마커 제거
@@ -383,3 +446,297 @@ function escapeHtml(str) {
         .replaceAll("'", '&#039;')
 }
 </script>
+
+<!--<template>
+  <q-page class="q-pa-md bg-white">
+    <div class="column q-gutter-md">
+
+      &lt;!&ndash; 상단 검색 카드 &ndash;&gt;
+      <q-card flat bordered>
+        <q-card-section>
+          <div class="row items-center q-col-gutter-sm justify-between">
+
+            &lt;!&ndash; 주소 입력 &ndash;&gt;
+            <div class="col-12 col-md-12 no-wrap">
+              <q-input
+                  v-model="address"
+                  dense
+                  outlined
+                  clearable
+                  label="주변 모범음식점 검색"
+                  placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
+                  @keyup.enter="handleSearch"
+                  style="width: 100%"
+              >
+                <template #prepend>
+                  <q-icon name="place"/>
+                </template>
+              </q-input>
+            </div>
+
+            &lt;!&ndash; 버튼 및 선택 박스 &ndash;&gt;
+            <div class="col-12 col-md-12 row items-center justify-between">
+              <q-btn
+                  color="primary"
+                  dense
+                  icon="search"
+                  label="검색"
+                  class="col-6 col-md-3"
+                  @click="handleSearch"
+              />
+              <q-btn
+                  color="secondary"
+                  dense icon="my_location"
+                  label="현재위치"
+                  class="col-6 col-md-3"
+                  @click="handleCurrentLocation"/>
+              <q-select
+                  v-model="radius"
+                  :options="radiusOptions"
+                  dense
+                  outlined
+                  emit-value
+                  map-options
+                  label="반경"
+                  class="col-6 col-md-3 q-gutter-md"
+              />
+              <q-select
+                  v-model="limit"
+                  :options="limitOptions"
+                  dense
+                  outlined
+                  emit-value
+                  map-options
+                  label="개수"
+                  class="col-6 col-md-3 q-gutter-md"/>
+            </div>
+          </div>
+        </q-card-section>
+      </q-card>
+
+      &lt;!&ndash; 지도 카드 &ndash;&gt;
+      <q-card flat bordered>
+        <q-card-section class="q-pa-none">
+          <div class="relative-position" style="width: 100%; height: 70vh;">
+            <div id="map" style="width: 100%; height: 100%;"></div>
+
+            &lt;!&ndash; 로딩 스피너 &ndash;&gt;
+            <q-inner-loading :showing="loading">
+              <q-spinner size="42px"/>
+              <div class="q-mt-sm">지도를 불러오는 중...</div>
+            </q-inner-loading>
+          </div>
+        </q-card-section>
+      </q-card>
+
+    </div>
+  </q-page>
+</template>
+
+<script setup>
+import {getNearbyRestaurants, getRestaurantsByLocation} from '@/api/restaurantApi'
+import {useQuasar} from 'quasar'
+import {onMounted, ref} from 'vue'
+import Map from 'ol/Map'
+import View from 'ol/View'
+import TileLayer from 'ol/layer/Tile'
+import XYZ from 'ol/source/XYZ'
+import ImageLayer from 'ol/layer/Image'
+import ImageWMS from 'ol/source/ImageWMS'
+import VectorLayer from 'ol/layer/Vector'
+import VectorSource from 'ol/source/Vector'
+import Feature from 'ol/Feature'
+import Point from 'ol/geom/Point'
+import {Icon, Style} from 'ol/style'
+import Overlay from 'ol/Overlay'
+import {fromLonLat} from 'ol/proj'
+
+const $q = useQuasar()
+const loading = ref(true)
+
+// 검색 상태
+const address = ref('')
+const radius = ref(0.1)
+const limit = ref(20)
+const radiusOptions = [
+  {label: '100m', value: 0.1},
+  {label: '300m', value: 0.3},
+  {label: '500m', value: 0.5},
+  {label: '1km', value: 1.0}
+]
+const limitOptions = [
+  {label: '10개', value: 10},
+  {label: '20개', value: 20},
+  {label: '30개', value: 30},
+  {label: '50개', value: 50},
+  {label: '100개', value: 100}
+]
+
+// 지도 상태
+let map = null
+let markerLayer = null
+let popupOverlay = null
+
+onMounted(() => {
+  initMap()
+  loading.value = false
+})
+
+function initMap() {
+  // 1) 기본 지도
+  const baseLayer = new TileLayer({
+    source: new XYZ({
+      url: 'https://api.vworld.kr/req/wmts/1.0.0/3ABE0F93-6B61-33E6-9B60-2122EB5FC9E0/Base/{z}/{y}/{x}.png'
+    })
+  })
+
+  // 2) WMS 레이어
+  const wmsLayer = new ImageLayer({
+    source: new ImageWMS({
+      url: 'https://geoserver.i4624.info/geoserver/test_geoserver/wms',
+      params: {
+        LAYERS: 'test_geoserver:seoul_group',
+        FORMAT: 'image/png',
+        TRANSPARENT: true,
+        SRS: 'EPSG:3857'
+      },
+      serverType: 'geoserver',
+      crossOrigin: 'anonymous'
+    }),
+    opacity: 0.6
+  })
+
+  // 3) 마커 레이어
+  markerLayer = new VectorLayer({
+    source: new VectorSource()
+  })
+
+  // 4) Map 생성
+  map = new Map({
+    target: 'map',
+    layers: [baseLayer, wmsLayer, markerLayer],
+    view: new View({
+      center: fromLonLat([126.9780, 37.5665]),
+      zoom: 13,
+      minZoom: 7,
+      maxZoom: 19
+    })
+  })
+
+  // 5) 팝업 Overlay
+  const popupEl = document.createElement('div')
+  popupEl.style.background = 'white'
+  popupEl.style.padding = '8px'
+  popupEl.style.borderRadius = '4px'
+  popupEl.style.border = '1px solid #333'
+
+  popupOverlay = new Overlay({
+    element: popupEl,
+    positioning: 'bottom-center',
+    stopEvent: false,
+    offset: [0, -10]
+  })
+  map.addOverlay(popupOverlay)
+
+  map.on('singleclick', (evt) => {
+    map.forEachFeatureAtPixel(evt.pixel, (feature) => {
+      const props = feature.getProperties()
+      if (props.name) {
+        popupEl.innerHTML = `<strong>${props.name}</strong><br>${props.address || ''}`
+        popupOverlay.setPosition(evt.coordinate)
+      }
+    })
+  })
+}
+
+// 마커 초기화
+function clearMarkers() {
+  markerLayer.getSource().clear()
+}
+
+// 마커 추가
+function addMarker(lon, lat, name, address) {
+  const feature = new Feature({
+    geometry: new Point(fromLonLat([lon, lat])),
+    name,
+    address
+  })
+  feature.setStyle(new Style({
+    image: new Icon({
+      src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
+      scale: 0.05
+    })
+  }))
+  markerLayer.getSource().addFeature(feature)
+}
+
+// 현재 위치 가져오기
+function getCurrentLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject('브라우저에서 위치 정보 지원 불가')
+    navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({lat: pos.coords.latitude, lon: pos.coords.longitude}),
+        (err) => reject(err),
+        {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
+    )
+  })
+}
+
+// 현재 위치 버튼
+async function handleCurrentLocation() {
+  loading.value = true
+  try {
+    const loc = await getCurrentLocation()
+    map.getView().setCenter(fromLonLat([loc.lon, loc.lat]))
+    map.getView().setZoom(15)
+    addMarker(loc.lon, loc.lat, '현재 위치')
+    const radiusInMeters = (radius.value || 0.1) * 1000
+    const res = await getRestaurantsByLocation({
+      lat: loc.lat,
+      lon: loc.lon,
+      radius: radiusInMeters,
+      limit: limit.value || 20
+    })
+    updateMapWithRestaurants(res)
+    $q.notify({type: 'positive', message: '현재 위치 기준으로 주변 식당 검색 완료'})
+  } catch (e) {
+    console.error(e)
+    $q.notify({type: 'negative', message: '현재 위치 검색 실패'})
+  } finally {
+    loading.value = false
+  }
+}
+
+// 주소 검색
+async function handleSearch() {
+  const addr = address.value.trim()
+  if (!addr) return $q.notify({type: 'warning', message: '주소를 입력해주세요.'})
+  loading.value = true
+  try {
+    const res = await getNearbyRestaurants({
+      address: addr,
+      radius: radius.value || 0.1,
+      limit: limit.value || 20
+    })
+    updateMapWithRestaurants(res)
+  } catch (e) {
+    console.error(e)
+    $q.notify({type: 'negative', message: '주변 식당 조회 실패'})
+  } finally {
+    loading.value = false
+  }
+}
+
+// 지도에 식당 표시
+function updateMapWithRestaurants(list) {
+  clearMarkers()
+  const valid = list.filter(it => Number.isFinite(it?.lat) && Number.isFinite(it?.lon))
+  if (!valid.length) return $q.notify({type: 'info', message: '좌표 정보가 있는 가게가 없습니다.'})
+  const center = valid[0]
+  map.getView().setCenter(fromLonLat([center.lon, center.lat]))
+  map.getView().setZoom(15)
+  valid.forEach(r => addMarker(r.lon, r.lat, r.restaurantName || '', r.address || ''))
+}
+</script>-->
+
+
