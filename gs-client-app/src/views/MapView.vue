@@ -11,24 +11,22 @@
             <!--도로명 주소 입력-->
             <div class="col-12 col-md-12 no-wrap">
               <q-input v-model="address" dense outlined clearable label="주변 모범음식점 검색"
-                       placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch"
-                       style="width: 100%">
+                placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch" style="width: 100%">
                 <template #prepend>
-                  <q-icon name="place"/>
+                  <q-icon name="place" />
                 </template>
               </q-input>
             </div>
 
             <!--버튼 및 선택 박스 영역-->
             <div class="col-12 col-md-12 row items-center justify-between">
-              <q-btn color="primary" dense icon="search" label="검색" class="col-6 col-md-3"
-                     @click="handleSearch"/>
+              <q-btn color="primary" dense icon="search" label="검색" class="col-6 col-md-3" @click="handleSearch" />
               <q-btn color="secondary" dense icon="my_location" label="현재위치" class="col-6 col-md-3"
-                     @click="handleCurrentLocation"/>
-              <q-select v-model="radius" :options="radiusOptions" dense outlined emit-value map-options
-                        label="반경" class="col-6 col-md-3 q-gutter-md"/>
-              <q-select v-model="limit" :options="limitOptions" dense outlined emit-value map-options
-                        label="개수" class="col-6 col-md-3 q-gutter-md"/>
+                @click="handleCurrentLocation" />
+              <q-select v-model="radius" :options="radiusOptions" dense outlined emit-value map-options label="반경"
+                class="col-6 col-md-3 q-gutter-md" />
+              <q-select v-model="limit" :options="limitOptions" dense outlined emit-value map-options label="개수"
+                class="col-6 col-md-3 q-gutter-md" />
             </div>
           </div>
         </q-card-section>
@@ -42,7 +40,7 @@
 
             <!--로딩 스피너-->
             <q-inner-loading :showing="loading">
-              <q-spinner size="42px"/>
+              <q-spinner size="42px" />
               <div class="q-mt-sm">지도를 불러오는 중...</div>
             </q-inner-loading>
           </div>
@@ -54,9 +52,9 @@
 </template>
 
 <script setup>
-import {getNearbyRestaurants, getRestaurantsByLocation} from '@/api/restaurantApi'
-import {useQuasar} from 'quasar'
-import {onMounted, ref} from 'vue'
+import { getNearbyRestaurants, getRestaurantsByLocation } from '@/api/restaurantApi'
+import { useQuasar } from 'quasar'
+import { onMounted, ref } from 'vue'
 import proj4 from "proj4"
 
 const $q = useQuasar()
@@ -71,19 +69,19 @@ const limit = ref(20) // 기본 표시 개수
 
 // 반경 선택 옵션
 const radiusOptions = [
-  {label: '100m', value: 0.1},
-  {label: '300m', value: 0.3},
-  {label: '500m', value: 0.5},
-  {label: '1km', value: 1.0}
+  { label: '100m', value: 0.1 },
+  { label: '300m', value: 0.3 },
+  { label: '500m', value: 0.5 },
+  { label: '1km', value: 1.0 }
 ]
 
 // 개수 제한 옵션
 const limitOptions = [
-  {label: '10개', value: 10},
-  {label: '20개', value: 20},
-  {label: '30개', value: 30},
-  {label: '50개', value: 50},
-  {label: '100개', value: 100}
+  { label: '10개', value: 10 },
+  { label: '20개', value: 20 },
+  { label: '30개', value: 30 },
+  { label: '50개', value: 50 },
+  { label: '100개', value: 100 }
 ]
 
 // 지도/마커 상태
@@ -105,8 +103,8 @@ onMounted(async () => {
         clientId.value = env.VITE_NAVER_CLIENT_ID || import.meta.env.VITE_NAVER_CLIENT_ID
       } catch (error) {
         console.warn(
-            '환경변수를 서버에서 가져올 수 없습니다. 빌드 시 환경변수를 사용합니다.',
-            error
+          '환경변수를 서버에서 가져올 수 없습니다. 빌드 시 환경변수를 사용합니다.',
+          error
         )
         clientId.value = import.meta.env.VITE_NAVER_CLIENT_ID
       }
@@ -114,15 +112,16 @@ onMounted(async () => {
 
     if (!clientId.value) {
       console.error('VITE_NAVER_CLIENT_ID가 설정되지 않았습니다.')
-      $q.notify({type: 'negative', message: '네이버 지도 키가 설정되지 않았습니다.'})
+      $q.notify({ type: 'negative', message: '네이버 지도 키가 설정되지 않았습니다.' })
       return
     }
 
     await ensureNaverLoaded()
+    await ensureProj4Loaded()
     initMap()
   } catch (err) {
     console.error(err)
-    $q.notify({type: 'negative', message: '지도를 초기화하는 중 오류가 발생했습니다.'})
+    $q.notify({ type: 'negative', message: '지도를 초기화하는 중 오류가 발생했습니다.' })
   } finally {
     loading.value = false
   }
@@ -143,6 +142,22 @@ function ensureNaverLoaded() {
   })
 }
 
+function ensureProj4Loaded() {
+  return new Promise((resolve, reject) => {
+    if (globalThis.proj4) {
+      resolve()
+      return
+    }
+    const s = document.createElement('script')
+    s.src = 'https://cdn.jsdelivr.net/npm/proj4@2.9.2/dist/proj4.js'
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = () => reject(new Error('proj4 로드 실패'))
+    document.head.appendChild(s)
+  })
+}
+
+
 function initMap() {
   // 기본 센터: 서울 시청 근처
   const centerLat = 37.5665
@@ -153,70 +168,52 @@ function initMap() {
     zoom: 13
   })
 
-  infoWindow = new globalThis.naver.maps.InfoWindow({anchorSkew: true})
+  infoWindow = new globalThis.naver.maps.InfoWindow({ anchorSkew: true })
 
   //========================================================================
   // GeoServer WMS Overlay
-
   const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
 
+  // 네이버 기본 위경도(EPSG:4326) ↔ GeoServer(EPSG:5186) 정의
   proj4.defs(
-      "EPSG:5186",
-      "+proj=tmerc +lat_0=38 +lon_0=127.5 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs"
+    'EPSG:5186',
+    '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs'
   )
 
-
+  const TILE = 256
   const wmsOverlay = new globalThis.naver.maps.ImageMapType({
-    getTileUrl: function (coord, zoom) {
-      const tileSize = 256
-
-      // // 좌표 -> 지도 LatLng 변환
-      // const nw = map.getProjection().fromCoordToLatLng(
-      //     new globalThis.naver.maps.Point(coord.x * tileSize, coord.y * tileSize)
-      // )
-      // const se = map.getProjection().fromCoordToLatLng(
-      //     new globalThis.naver.maps.Point((coord.x + 1) * tileSize, (coord.y + 1) * tileSize)
-      // )
-      //
-      // // bbox: WMS 요청용
-      // // 위경도 -> EPSG:5186
-      // const nw5186 = proj4("EPSG:4326", "EPSG:5186", [nw.lng(), nw.lat()])
-      // const se5186 = proj4("EPSG:4326", "EPSG:5186", [se.lng(), se.lat()])
-      //
-      // // BBOX 생성 (minX, minY, maxX, maxY)
-      // const bbox = [
-      //   nw5186[0],  // minX
-      //   se5186[1],  // minY
-      //   se5186[0],  // maxX
-      //   nw5186[1]   // maxY
-      // ].join(",")
-      const bbox = "179187.238943511,537124.364378947,216246.233627722,566866.044297778"
-
-      // WMS GetMap 요청 URL
-      return `${wmsUrl}?service=WMS&version=1.1.0&request=GetMap` +
-          `&layers=test_geoserver:seoul_group` +
-          `&styles=` +
-          `&format=image/png` +
-          `&transparent=true` +
-          `&srs=EPSG:5186` +
-          `&bbox=${bbox}` +
-          `&width=${tileSize}&height=${tileSize}`
-    },
-    tileSize: new naver.maps.Size(768, 616),
-    opacity: 0.6,
-    name: 'WMS Layer',
+    tileSize: new globalThis.naver.maps.Size(TILE, TILE),
     minZoom: 6,
     maxZoom: 20,
-    projection: naver.maps.EPSG3857
+    opacity: 0.6,
+    name: 'Seoul WMS',
+    getTileUrl(coord, zoom) {
+      // 타일 좌상/우하 픽셀 → LatLng
+      const p1 = new globalThis.naver.maps.Point(coord.x * TILE, coord.y * TILE)
+      const p2 = new globalThis.naver.maps.Point((coord.x + 1) * TILE, (coord.y + 1) * TILE)
+
+      const nw = map.getProjection().fromCoordToLatLng(p1) // (lat,lng)
+      const se = map.getProjection().fromCoordToLatLng(p2)
+
+      // EPSG:4326(lat,lng) → EPSG:5186(minX,minY,maxX,maxY)
+      const [minX, minY] = proj4('EPSG:4326', 'EPSG:5186', [nw.lng(), se.lat()])
+      const [maxX, maxY] = proj4('EPSG:4326', 'EPSG:5186', [se.lng(), nw.lat()])
+      const bbox = [minX, minY, maxX, maxY].join(',')
+
+      return `${wmsUrl}?service=WMS&version=1.1.0&request=GetMap`
+        + `&layers=test_geoserver:seoul_group`
+        + `&styles=`
+        + `&format=image/png`
+        + `&transparent=true`
+        + `&srs=EPSG:5186`
+        + `&bbox=${bbox}`
+        + `&width=${TILE}&height=${TILE}`
+    }
   })
 
-  // WMS 레이어를 별도 지도 타입으로 등록
-  map.mapTypes.set('WMS_LAYER', wmsOverlay)
-
-  // 기본 지도 + WMS를 동시에 보려면 custom overlay 사용
-  map.setMapTypeId('normal') // 기본 지도 유지
-  // WMS를 커스텀 오버레이로 추가
-  map.overlayMapTypes = [wmsOverlay]
+  // 기본 지도 유지 + 오버레이 추가
+  map.setMapTypeId(globalThis.naver.maps.MapTypeId.NORMAL)
+  map.setOptions({ overlayMapTypes: [wmsOverlay] })
 }
 
 // 기존 마커 제거
@@ -270,31 +267,31 @@ function getCurrentLocation() {
     }
 
     navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude
-          const lon = position.coords.longitude
-          resolve({lat, lon})
-        },
-        (error) => {
-          let message = '위치 정보를 가져올 수 없습니다.'
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              message = '위치 정보 사용 권한이 거부되었습니다.'
-              break
-            case error.POSITION_UNAVAILABLE:
-              message = '위치 정보를 사용할 수 없습니다.'
-              break
-            case error.TIMEOUT:
-              message = '위치 정보 요청 시간이 초과되었습니다.'
-              break
-          }
-          reject(new Error(message))
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0
+      (position) => {
+        const lat = position.coords.latitude
+        const lon = position.coords.longitude
+        resolve({ lat, lon })
+      },
+      (error) => {
+        let message = '위치 정보를 가져올 수 없습니다.'
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            message = '위치 정보 사용 권한이 거부되었습니다.'
+            break
+          case error.POSITION_UNAVAILABLE:
+            message = '위치 정보를 사용할 수 없습니다.'
+            break
+          case error.TIMEOUT:
+            message = '위치 정보 요청 시간이 초과되었습니다.'
+            break
         }
+        reject(new Error(message))
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
     )
   })
 }
@@ -302,7 +299,7 @@ function getCurrentLocation() {
 // 현재 위치 기반 검색
 async function handleCurrentLocation() {
   if (!map) {
-    $q.notify({type: 'negative', message: '지도가 아직 초기화되지 않았습니다.'})
+    $q.notify({ type: 'negative', message: '지도가 아직 초기화되지 않았습니다.' })
     return
   }
 
@@ -329,15 +326,15 @@ async function handleCurrentLocation() {
 
     if (!list.length) {
       clearMarkers()
-      $q.notify({type: 'info', message: '주변에 표시할 가게가 없습니다.'})
+      $q.notify({ type: 'info', message: '주변에 표시할 가게가 없습니다.' })
       return
     }
 
     updateMapWithRestaurants(list)
-    $q.notify({type: 'positive', message: '현재 위치 기준으로 주변 식당을 검색했습니다.'})
+    $q.notify({ type: 'positive', message: '현재 위치 기준으로 주변 식당을 검색했습니다.' })
   } catch (e) {
     console.error('현재 위치 검색 실패:', e)
-    $q.notify({type: 'negative', message: e.message || '현재 위치 검색에 실패했습니다.'})
+    $q.notify({ type: 'negative', message: e.message || '현재 위치 검색에 실패했습니다.' })
   } finally {
     loading.value = false
   }
@@ -347,12 +344,12 @@ async function handleCurrentLocation() {
 async function handleSearch() {
   const addr = address.value.trim()
   if (!addr) {
-    $q.notify({type: 'warning', message: '도로명 주소를 입력해 주세요.'})
+    $q.notify({ type: 'warning', message: '도로명 주소를 입력해 주세요.' })
     return
   }
 
   if (!map) {
-    $q.notify({type: 'negative', message: '지도가 아직 초기화되지 않았습니다.'})
+    $q.notify({ type: 'negative', message: '지도가 아직 초기화되지 않았습니다.' })
     return
   }
 
@@ -371,14 +368,14 @@ async function handleSearch() {
 
     if (!list.length) {
       clearMarkers()
-      $q.notify({type: 'info', message: '주변에 표시할 가게가 없습니다.'})
+      $q.notify({ type: 'info', message: '주변에 표시할 가게가 없습니다.' })
       return
     }
 
     updateMapWithRestaurants(list)
   } catch (e) {
     console.error('주변 가게 조회 실패:', e)
-    $q.notify({type: 'negative', message: e.message || '주변 가게 조회에 실패했습니다.'})
+    $q.notify({ type: 'negative', message: e.message || '주변 가게 조회에 실패했습니다.' })
   } finally {
     loading.value = false
   }
@@ -389,10 +386,10 @@ function updateMapWithRestaurants(list) {
   clearMarkers()
 
   const valid = list.filter(
-      it =>
-          Number.isFinite(it?.lat) &&
-          Number.isFinite(it?.lon) &&
-          !(it.lat === 0 && it.lon === 0)
+    it =>
+      Number.isFinite(it?.lat) &&
+      Number.isFinite(it?.lon) &&
+      !(it.lat === 0 && it.lon === 0)
   )
 
   if (!valid.length) {
@@ -418,7 +415,7 @@ function updateMapWithRestaurants(list) {
     markers.push(marker)
 
     const contentHtml =
-        `<div style="padding:8px; line-height:1.4;">
+      `<div style="padding:8px; line-height:1.4;">
     <div style="font-weight:600; margin-bottom:4px;">${escapeHtml(r.restaurantName || '')}</div>
     <div style="color:#666;">${escapeHtml(r.address || '')}</div>
     <div style="margin-top:8px;">
@@ -439,11 +436,11 @@ function updateMapWithRestaurants(list) {
 // XSS 방지용 간단 이스케이프
 function escapeHtml(str) {
   return String(str)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
 }
 </script>
 
@@ -738,5 +735,3 @@ function updateMapWithRestaurants(list) {
   valid.forEach(r => addMarker(r.lon, r.lat, r.restaurantName || '', r.address || ''))
 }
 </script>-->
-
-
