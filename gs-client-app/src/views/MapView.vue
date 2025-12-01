@@ -55,7 +55,6 @@
 import { getNearbyRestaurants, getRestaurantsByLocation } from '@/api/restaurantApi'
 import { useQuasar } from 'quasar'
 import { onMounted, ref } from 'vue'
-import proj4 from "proj4"
 
 const $q = useQuasar()
 
@@ -173,47 +172,122 @@ function initMap() {
   //========================================================================
   // GeoServer WMS Overlay
   const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
+  const wmsLayer = 'test_geoserver:gyeonggi-tiff04' // 레이어 이름 (seoul_group 또는 gyeonggi-tiff04)
+
+  // proj4가 로드되었는지 확인
+  if (!globalThis.proj4) {
+    console.error('proj4가 로드되지 않았습니다.')
+    return
+  }
 
   // 네이버 기본 위경도(EPSG:4326) ↔ GeoServer(EPSG:5186) 정의
-  proj4.defs(
+  globalThis.proj4.defs(
     'EPSG:5186',
     '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs'
   )
 
+  // WMS 오버레이를 타일 방식으로 추가
   const TILE = 256
-  const wmsOverlay = new globalThis.naver.maps.ImageMapType({
-    tileSize: new globalThis.naver.maps.Size(TILE, TILE),
-    minZoom: 6,
-    maxZoom: 20,
-    opacity: 0.6,
-    name: 'Seoul WMS',
-    getTileUrl(coord, zoom) {
-      // 타일 좌상/우하 픽셀 → LatLng
-      const p1 = new globalThis.naver.maps.Point(coord.x * TILE, coord.y * TILE)
-      const p2 = new globalThis.naver.maps.Point((coord.x + 1) * TILE, (coord.y + 1) * TILE)
-
-      const nw = map.getProjection().fromCoordToLatLng(p1) // (lat,lng)
-      const se = map.getProjection().fromCoordToLatLng(p2)
-
-      // EPSG:4326(lat,lng) → EPSG:5186(minX,minY,maxX,maxY)
-      const [minX, minY] = proj4('EPSG:4326', 'EPSG:5186', [nw.lng(), se.lat()])
-      const [maxX, maxY] = proj4('EPSG:4326', 'EPSG:5186', [se.lng(), nw.lat()])
+  let wmsOverlay = null
+  
+  // 지도 bounds 변경 시 WMS 이미지 업데이트
+  function updateWMSOverlay() {
+    try {
+      const bounds = map.getBounds()
+      const sw = bounds.getSW() // 남서쪽 (min)
+      const ne = bounds.getNE() // 북동쪽 (max)
+      
+      // EPSG:4326(lng,lat) → EPSG:5186(x,y)
+      const [minX, minY] = globalThis.proj4('EPSG:4326', 'EPSG:5186', [sw.lng(), sw.lat()])
+      const [maxX, maxY] = globalThis.proj4('EPSG:4326', 'EPSG:5186', [ne.lng(), ne.lat()])
+      
       const bbox = [minX, minY, maxX, maxY].join(',')
-
-      return `${wmsUrl}?service=WMS&version=1.1.0&request=GetMap`
-        + `&layers=test_geoserver:seoul_group`
-        + `&styles=`
-        + `&format=image/png`
-        + `&transparent=true`
-        + `&srs=EPSG:5186`
-        + `&bbox=${bbox}`
-        + `&width=${TILE}&height=${TILE}`
+      const mapSize = map.getSize()
+      const width = mapSize.width || 800
+      const height = mapSize.height || 600
+      
+      // GeoServer가 정상 응답하는 형식으로 URL 생성
+      // VERSION 1.1.1 사용, 대문자 파라미터명, EXCEPTIONS 추가
+      const url = `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
+        + `&FORMAT=image%2Fpng`  // 투명도 지원을 위해 png 사용
+        + `&TRANSPARENT=true`
+        + `&STYLES`  // 값 없이 파라미터만
+        + `&LAYERS=${encodeURIComponent(wmsLayer)}`
+        + `&EXCEPTIONS=application%2Fvnd.ogc.se_inimage`
+        + `&SRS=EPSG%3A5186`
+        + `&WIDTH=${width}&HEIGHT=${height}`
+        + `&BBOX=${encodeURIComponent(bbox)}`
+      
+      console.log('WMS URL 업데이트:', url)
+      console.log('Bounds:', { sw: `${sw.lat()},${sw.lng()}`, ne: `${ne.lat()},${ne.lng()}` })
+      console.log('EPSG:5186 bbox:', bbox)
+      
+      // 기존 오버레이 제거
+      if (wmsOverlay) {
+        wmsOverlay.setMap(null)
+      }
+      
+      // 새로운 오버레이 생성
+      const overlayImage = document.createElement('img')
+      overlayImage.src = url
+      overlayImage.style.opacity = '0.6'
+      overlayImage.style.pointerEvents = 'none'
+      overlayImage.onerror = (e) => {
+        console.error('WMS 이미지 로드 실패:', url, e)
+      }
+      overlayImage.onload = () => {
+        console.log('WMS 이미지 로드 성공')
+      }
+      
+      // 네이버 지도 bounds를 클로저로 저장 (이미지 배치용)
+      const boundsForOverlay = { sw, ne }
+      
+      wmsOverlay = new globalThis.naver.maps.OverlayView()
+      wmsOverlay.onAdd = function() {
+        const panes = this.getPanes()
+        panes.overlayLayer.appendChild(overlayImage)
+      }
+      wmsOverlay.draw = function() {
+        const projection = this.getProjection()
+        // 네이버 지도 좌표를 픽셀 좌표로 변환
+        const swPixel = projection.fromLatLngToDivPixel(boundsForOverlay.sw)
+        const nePixel = projection.fromLatLngToDivPixel(boundsForOverlay.ne)
+        
+        // 이미지 위치와 크기 설정
+        overlayImage.style.position = 'absolute'
+        overlayImage.style.left = swPixel.x + 'px'
+        overlayImage.style.top = nePixel.y + 'px'
+        overlayImage.style.width = Math.abs(nePixel.x - swPixel.x) + 'px'
+        overlayImage.style.height = Math.abs(swPixel.y - nePixel.y) + 'px'
+        
+        console.log('이미지 배치:', {
+          sw: `${boundsForOverlay.sw.lat()},${boundsForOverlay.sw.lng()}`,
+          ne: `${boundsForOverlay.ne.lat()},${boundsForOverlay.ne.lng()}`,
+          swPixel: { x: swPixel.x, y: swPixel.y },
+          nePixel: { x: nePixel.x, y: nePixel.y },
+          size: { width: Math.abs(nePixel.x - swPixel.x), height: Math.abs(swPixel.y - nePixel.y) }
+        })
+      }
+      wmsOverlay.onRemove = function() {
+        if (overlayImage && overlayImage.parentNode) {
+          overlayImage.parentNode.removeChild(overlayImage)
+        }
+      }
+      
+      wmsOverlay.setMap(map)
+    } catch (error) {
+      console.error('WMS 오버레이 업데이트 오류:', error)
     }
-  })
-
-  // 기본 지도 유지 + 오버레이 추가
-  map.setMapTypeId(globalThis.naver.maps.MapTypeId.NORMAL)
-  map.setOptions({ overlayMapTypes: [wmsOverlay] })
+  }
+  
+  // 지도 이벤트 리스너 추가
+  map.addListener('bounds_changed', updateWMSOverlay)
+  map.addListener('zoom_changed', updateWMSOverlay)
+  
+  // 초기 WMS 오버레이 생성
+  setTimeout(updateWMSOverlay, 500)
+  
+  console.log('GeoServer WMS 오버레이가 추가되었습니다.')
 }
 
 // 기존 마커 제거
