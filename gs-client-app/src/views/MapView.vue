@@ -197,30 +197,38 @@ function initMap() {
       const sw = bounds.getSW() // 남서쪽 (min)
       const ne = bounds.getNE() // 북동쪽 (max)
       
-      // EPSG:4326(lng,lat) → EPSG:5186(x,y)
-      const [minX, minY] = globalThis.proj4('EPSG:4326', 'EPSG:5186', [sw.lng(), sw.lat()])
-      const [maxX, maxY] = globalThis.proj4('EPSG:4326', 'EPSG:5186', [ne.lng(), ne.lat()])
+      // 네이버 지도 bounds (EPSG:4326) - 네이버 지도는 EPSG:4326 사용
+      const swLat = sw.lat()
+      const swLng = sw.lng()
+      const neLat = ne.lat()
+      const neLng = ne.lng()
       
-      const bbox = [minX, minY, maxX, maxY].join(',')
+      // GeoServer가 자동으로 좌표계를 변환하도록 EPSG:4326으로 요청
+      // bbox는 minX, minY, maxX, maxY 순서 (WMS 표준)
+      // EPSG:4326에서는 lng, lat 순서로 minLng, minLat, maxLng, maxLat
+      const bbox = [swLng, swLat, neLng, neLat].join(',')
       const mapSize = map.getSize()
       const width = mapSize.width || 800
       const height = mapSize.height || 600
       
       // GeoServer가 정상 응답하는 형식으로 URL 생성
-      // VERSION 1.1.1 사용, 대문자 파라미터명, EXCEPTIONS 추가
+      // GeoServer가 EPSG:4326으로 자동 변환해주므로 SRS=EPSG:4326 사용
       const url = `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
         + `&FORMAT=image%2Fpng`  // 투명도 지원을 위해 png 사용
         + `&TRANSPARENT=true`
         + `&STYLES`  // 값 없이 파라미터만
         + `&LAYERS=${encodeURIComponent(wmsLayer)}`
         + `&EXCEPTIONS=application%2Fvnd.ogc.se_inimage`
-        + `&SRS=EPSG%3A5186`
+        + `&SRS=EPSG%3A4326`  // 네이버 지도와 동일한 좌표계 사용
         + `&WIDTH=${width}&HEIGHT=${height}`
         + `&BBOX=${encodeURIComponent(bbox)}`
       
       console.log('WMS URL 업데이트:', url)
-      console.log('Bounds:', { sw: `${sw.lat()},${sw.lng()}`, ne: `${ne.lat()},${ne.lng()}` })
-      console.log('EPSG:5186 bbox:', bbox)
+      console.log('네이버 지도 Bounds (EPSG:4326):', { 
+        sw: `${swLat},${swLng}`, 
+        ne: `${neLat},${neLng}` 
+      })
+      console.log('WMS BBOX (EPSG:4326):', bbox)
       
       // 기존 오버레이 제거
       if (wmsOverlay) {
@@ -240,7 +248,11 @@ function initMap() {
       }
       
       // 네이버 지도 bounds를 클로저로 저장 (이미지 배치용)
-      const boundsForOverlay = { sw, ne }
+      // WMS 이미지는 네이버 지도의 bounds에 정확히 맞춰서 배치
+      const boundsForOverlay = { 
+        sw: new globalThis.naver.maps.LatLng(swLat, swLng),
+        ne: new globalThis.naver.maps.LatLng(neLat, neLng)
+      }
       
       wmsOverlay = new globalThis.naver.maps.OverlayView()
       wmsOverlay.onAdd = function() {
@@ -248,25 +260,60 @@ function initMap() {
         panes.overlayLayer.appendChild(overlayImage)
       }
       wmsOverlay.draw = function() {
-        const projection = this.getProjection()
-        // 네이버 지도 좌표를 픽셀 좌표로 변환
-        const swPixel = projection.fromLatLngToDivPixel(boundsForOverlay.sw)
-        const nePixel = projection.fromLatLngToDivPixel(boundsForOverlay.ne)
-        
-        // 이미지 위치와 크기 설정
-        overlayImage.style.position = 'absolute'
-        overlayImage.style.left = swPixel.x + 'px'
-        overlayImage.style.top = nePixel.y + 'px'
-        overlayImage.style.width = Math.abs(nePixel.x - swPixel.x) + 'px'
-        overlayImage.style.height = Math.abs(swPixel.y - nePixel.y) + 'px'
-        
-        console.log('이미지 배치:', {
-          sw: `${boundsForOverlay.sw.lat()},${boundsForOverlay.sw.lng()}`,
-          ne: `${boundsForOverlay.ne.lat()},${boundsForOverlay.ne.lng()}`,
-          swPixel: { x: swPixel.x, y: swPixel.y },
-          nePixel: { x: nePixel.x, y: nePixel.y },
-          size: { width: Math.abs(nePixel.x - swPixel.x), height: Math.abs(swPixel.y - nePixel.y) }
-        })
+        try {
+          const projection = this.getProjection()
+          const mapSize = map.getSize()
+          
+          // 네이버 지도 API에서 좌표를 픽셀로 변환
+          // 네이버 지도는 fromCoordToOffset 메서드를 사용
+          // LatLng를 Point로 변환 후 사용
+          const swCoord = new globalThis.naver.maps.Point(
+            boundsForOverlay.sw.lng(),
+            boundsForOverlay.sw.lat()
+          )
+          const neCoord = new globalThis.naver.maps.Point(
+            boundsForOverlay.ne.lng(),
+            boundsForOverlay.ne.lat()
+          )
+          
+          // projection이 존재하고 메서드가 있는지 확인
+          if (projection && typeof projection.fromCoordToOffset === 'function') {
+            const swOffset = projection.fromCoordToOffset(swCoord)
+            const neOffset = projection.fromCoordToOffset(neCoord)
+            
+            // 이미지 위치와 크기 설정
+            overlayImage.style.position = 'absolute'
+            overlayImage.style.left = swOffset.x + 'px'
+            overlayImage.style.top = neOffset.y + 'px'
+            overlayImage.style.width = Math.abs(neOffset.x - swOffset.x) + 'px'
+            overlayImage.style.height = Math.abs(swOffset.y - neOffset.y) + 'px'
+          } else {
+            // 대체 방법: 지도 bounds를 기준으로 직접 계산
+            const mapBounds = map.getBounds()
+            const swBounds = mapBounds.getSW()
+            const neBounds = mapBounds.getNE()
+            
+            const lngRatio = (boundsForOverlay.sw.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
+            const latRatioSW = (neBounds.lat() - boundsForOverlay.sw.lat()) / (neBounds.lat() - swBounds.lat())
+            const lngRatioNE = (boundsForOverlay.ne.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
+            const latRatioNE = (neBounds.lat() - boundsForOverlay.ne.lat()) / (neBounds.lat() - swBounds.lat())
+            
+            overlayImage.style.position = 'absolute'
+            overlayImage.style.left = (lngRatio * mapSize.width) + 'px'
+            overlayImage.style.top = (latRatioSW * mapSize.height) + 'px'
+            overlayImage.style.width = ((lngRatioNE - lngRatio) * mapSize.width) + 'px'
+            overlayImage.style.height = ((latRatioSW - latRatioNE) * mapSize.height) + 'px'
+          }
+        } catch (error) {
+          console.error('오버레이 draw 오류:', error)
+          // 오류 발생 시 전체 지도 크기로 설정
+          const mapSize = map.getSize()
+          overlayImage.style.position = 'absolute'
+          overlayImage.style.left = '0px'
+          overlayImage.style.top = '0px'
+          overlayImage.style.width = mapSize.width + 'px'
+          overlayImage.style.height = mapSize.height + 'px'
+        }
       }
       wmsOverlay.onRemove = function() {
         if (overlayImage && overlayImage.parentNode) {
