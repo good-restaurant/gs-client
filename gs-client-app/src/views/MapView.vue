@@ -38,6 +38,18 @@
           <div class="relative-position" style="width: 100%; height: 70vh;">
             <div id="map" style="width: 100%; height: 100%;"></div>
 
+            <!--WMS 레이어 토글 버튼-->
+            <q-btn
+              :color="wmsLayerVisible ? 'primary' : 'grey'"
+              :icon="wmsLayerVisible ? 'layers' : 'layers_off'"
+              :label="wmsLayerVisible ? '지적편집도 표시' : '지적편집도 숨기기'"
+              dense
+              rounded
+              class="absolute-top-right q-ma-md"
+              style="z-index: 1000;"
+              @click="toggleWMSLayer"
+            />
+
             <!--로딩 스피너-->
             <q-inner-loading :showing="loading">
               <q-spinner size="42px" />
@@ -60,6 +72,7 @@ const $q = useQuasar()
 
 const clientId = ref('')
 const loading = ref(true)
+const wmsLayerVisible = ref(true) // WMS 레이어 표시 여부
 
 // 검색 폼 상태
 const address = ref('')
@@ -88,6 +101,11 @@ let map = null
 let infoWindow = null
 let markers = []
 let currentLocationMarker = null
+let wmsOverlay = null // WMS 오버레이 전역 변수
+
+// WMS 설정
+const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
+const wmsLayer = 'test_geoserver:gyeonggi-tiff04' // 레이어 이름
 
 onMounted(async () => {
   try {
@@ -171,29 +189,37 @@ function initMap() {
 
   //========================================================================
   // GeoServer WMS Overlay
-  const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
-  const wmsLayer = 'test_geoserver:gyeonggi-tiff04' // 레이어 이름 (seoul_group 또는 gyeonggi-tiff04)
-
   // proj4가 로드되었는지 확인
   if (!globalThis.proj4) {
     console.error('proj4가 로드되지 않았습니다.')
     return
   }
 
-  // 네이버 기본 위경도(EPSG:4326) ↔ GeoServer(EPSG:5186) 정의
+  // 네이버 기본 위경도(EPSG:4326) <-> GeoServer(EPSG:5186) 변환좌표
   globalThis.proj4.defs(
     'EPSG:5186',
     '+proj=tmerc +lat_0=38 +lon_0=127.5 +k=1 +x_0=200000 +y_0=600000 +ellps=GRS80 +units=m +no_defs'
   )
 
-  // WMS 오버레이를 타일 방식으로 추가
-  const TILE = 256
-  let wmsOverlay = null
+  // 지도 이벤트 리스너 추가
+  map.addListener('bounds_changed', updateWMSOverlay)
+  map.addListener('zoom_changed', updateWMSOverlay)
   
-  // 지도 bounds 변경 시 WMS 이미지 업데이트
-  function updateWMSOverlay() {
-    try {
-      const bounds = map.getBounds()
+  // 초기 WMS 오버레이 생성
+  setTimeout(updateWMSOverlay, 500)
+  
+  console.log('GeoServer WMS 오버레이가 추가되었습니다.')
+}
+
+// 지도 bounds 변경 시 WMS 이미지 업데이트
+function updateWMSOverlay() {
+  // 지도가 초기화되지 않았거나 WMS 레이어가 비활성화되어 있으면 업데이트하지 않음
+  if (!map || !wmsLayerVisible.value) {
+    return
+  }
+  
+  try {
+    const bounds = map.getBounds()
       const sw = bounds.getSW() // 남서쪽 (min)
       const ne = bounds.getNE() // 북동쪽 (max)
       
@@ -223,12 +249,13 @@ function initMap() {
         + `&WIDTH=${width}&HEIGHT=${height}`
         + `&BBOX=${encodeURIComponent(bbox)}`
       
-      console.log('WMS URL 업데이트:', url)
-      console.log('네이버 지도 Bounds (EPSG:4326):', { 
-        sw: `${swLat},${swLng}`, 
-        ne: `${neLat},${neLng}` 
-      })
-      console.log('WMS BBOX (EPSG:4326):', bbox)
+        // 레이어 테스트용 콘솔 로그
+    //   console.log('WMS URL 업데이트:', url)
+    //   console.log('네이버 지도 Bounds (EPSG:4326):', { 
+        // sw: `${swLat},${swLng}`, 
+        // ne: `${neLat},${neLng}` 
+      // })
+      // console.log('WMS BBOX (EPSG:4326):', bbox)
       
       // 기존 오버레이 제거
       if (wmsOverlay) {
@@ -317,7 +344,7 @@ function initMap() {
       }
       wmsOverlay.onRemove = function() {
         if (overlayImage && overlayImage.parentNode) {
-          overlayImage.parentNode.removeChild(overlayImage)
+          overlayImage.remove()
         }
       }
       
@@ -326,15 +353,27 @@ function initMap() {
       console.error('WMS 오버레이 업데이트 오류:', error)
     }
   }
+
+// WMS 레이어 토글 함수
+function toggleWMSLayer() {
+  wmsLayerVisible.value = !wmsLayerVisible.value
   
-  // 지도 이벤트 리스너 추가
-  map.addListener('bounds_changed', updateWMSOverlay)
-  map.addListener('zoom_changed', updateWMSOverlay)
-  
-  // 초기 WMS 오버레이 생성
-  setTimeout(updateWMSOverlay, 500)
-  
-  console.log('GeoServer WMS 오버레이가 추가되었습니다.')
+  if (wmsLayerVisible.value) {
+    // 레이어 표시
+    if (wmsOverlay) {
+      wmsOverlay.setMap(map)
+    } else if (map) {
+      // 오버레이가 없으면 업데이트 함수 호출
+      updateWMSOverlay()
+    }
+    $q.notify({ type: 'positive', message: 'WMS 레이어가 표시됩니다.' })
+  } else {
+    // 레이어 숨김
+    if (wmsOverlay) {
+      wmsOverlay.setMap(null)
+    }
+    $q.notify({ type: 'info', message: 'WMS 레이어가 숨겨집니다.' })
+  }
 }
 
 // 기존 마커 제거
