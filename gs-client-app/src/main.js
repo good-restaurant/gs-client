@@ -13,26 +13,36 @@ import axios from 'axios'
 import { buildKeycloakOptions } from './keycloak-config'
 
 const bootstrap = async () => {
+  let kcInitSuccess = true
+
+  // Keycloak 초기화
   try {
-
-    // Keycloak 초기화
     await keycloak.init(buildKeycloakOptions())
+  } catch (err) {
+    kcInitSuccess = false
+    console.warn("Keycloak init failed → fallback to unauthenticated mode", err)
+  }
 
-    // Vue 앱 생성
-    const app = createApp(App)
+  // Vue 앱 생성
+  const app = createApp(App)
 
-    // axios 인스턴스 하나만 사용
-    const api = axios.create({
-      baseURL: 'https://gs-main-api.i4624.info'
-    })
+  // axios 인스턴스
+  const api = axios.create({
+    baseURL: 'https://gs-main-api.i4624.info'
+  })
 
-    // attachToken interceptor
-    api.interceptors.request.use(async (config) => {
+  // attachToken interceptor
+  api.interceptors.request.use(async (config) => {
+    try {
       if (keycloak.authenticated && keycloak.token) {
 
-        // refresh
+        // 토큰 만료 30초 전 refresh 시도
         if (keycloak.isTokenExpired(30)) {
-          await keycloak.updateToken(30)
+          try {
+            await keycloak.updateToken(30)
+          } catch (refreshErr) {
+            console.warn("Token refresh failed", refreshErr)
+          }
         }
 
         config.headers = {
@@ -40,26 +50,28 @@ const bootstrap = async () => {
           Authorization: `Bearer ${keycloak.token}`
         }
       }
+    } catch (err) {
+      console.warn("Keycloak token attach error", err)
+    }
 
-      return config
-    })
+    return config
+  })
 
-    // Vue plugins
-    app.use(createPinia())
-    app.use(router)
-    app.use(Quasar, {
-      plugins: { Notify, Dialog },
-      iconSet: quasarIconSet
-    })
+  // Vue plugins
+  app.use(createPinia())
+  app.use(router)
+  app.use(Quasar, {
+    plugins: { Notify, Dialog },
+    iconSet: quasarIconSet
+  })
 
-    // 전역 등록
-    app.config.globalProperties.$keycloak = keycloak
-    app.config.globalProperties.$api = api
+  // 전역 등록
+  app.config.globalProperties.$keycloak = keycloak
+  app.config.globalProperties.$api = api
+  app.config.globalProperties.$kcInitSuccess = kcInitSuccess
 
-    app.mount('#app')
-  } catch (error) {
-    console.error('Failed to initialize Keycloak', error)
-  }
+  // mount
+  app.mount('#app')
 }
 
 bootstrap()
