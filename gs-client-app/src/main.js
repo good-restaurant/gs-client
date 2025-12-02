@@ -10,16 +10,13 @@ import keycloak from './keycloak'
 import router from './router'
 
 import axios from 'axios'
+import { buildKeycloakOptions } from './keycloak-config'
 
 const bootstrap = async () => {
   try {
+
     // Keycloak 초기화
-    await keycloak.init({
-      onLoad: 'check-sso',
-      pkceMethod: 'S256',
-      silentCheckSsoRedirectUri: window.location.origin + '/silent-check-sso.html',
-      checkLoginIframe: true
-    })
+    await keycloak.init(buildKeycloakOptions())
 
     // Vue 앱 생성
     const app = createApp(App)
