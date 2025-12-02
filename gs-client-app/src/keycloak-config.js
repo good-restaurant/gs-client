@@ -52,7 +52,7 @@ if (isDevNaver) {
 
 // fallback(기타 테스트 환경)
 return {
-    onLoad: 'login-required',
+    onLoad: 'none',
     pkceMethod: 'S256',
     checkLoginIframe: false
 }
