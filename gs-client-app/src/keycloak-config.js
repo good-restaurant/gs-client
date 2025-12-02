@@ -25,7 +25,7 @@ local: 'http://localhost:3000/silent-check-sso.html'
 export function buildKeycloakOptions() {
     if (isLocal) {
     return {
-    onLoad: 'check-sso',
+    onLoad: 'none',
     pkceMethod: 'S256',
     silentCheckSsoRedirectUri: silentCheckUrlMap.local,
     checkLoginIframe: true
@@ -34,7 +34,7 @@ export function buildKeycloakOptions() {
 
 if (isProduction) {
     return {
-    onLoad: 'check-sso',
+    onLoad: 'none',
     pkceMethod: 'S256',
     silentCheckSsoRedirectUri: silentCheckUrlMap.prod,
     checkLoginIframe: true
