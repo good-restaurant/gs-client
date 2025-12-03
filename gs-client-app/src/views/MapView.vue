@@ -105,7 +105,7 @@ let wmsOverlay = null // WMS 오버레이 전역 변수
 
 // WMS 설정
 const wmsUrl = 'https://geoserver.i4624.info/geoserver/test_geoserver/wms'
-const wmsLayer = 'test_geoserver:gyeonggi-tiff04' // 레이어 이름
+const wmsLayer = 'test_geoserver:tileset-combined' // 레이어 이름
 
 onMounted(async () => {
   try {
