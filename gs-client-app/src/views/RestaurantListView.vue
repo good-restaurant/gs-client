@@ -7,12 +7,7 @@
       <q-card flat bordered class="list-hero">
         <q-card-section class="row items-center justify-between no-wrap">
           <div class="row items-center q-gutter-md">
-            <q-avatar
-              size="56px"
-              color="primary"
-              text-color="white"
-              class="list-hero__avatar"
-            >
+            <q-avatar size="56px" color="primary" text-color="white" class="list-hero__avatar">
               <q-icon name="restaurant" size="30px" />
             </q-avatar>
 
@@ -24,13 +19,7 @@
           </div>
 
           <div class="column items-end q-gutter-sm">
-            <q-chip
-              square
-              color="white"
-              text-color="primary"
-              icon="store"
-              class="text-weight-medium"
-            >
+            <q-chip square color="white" text-color="primary" icon="store" class="text-weight-medium">
               총 {{ rows.length }}곳
             </q-chip>
           </div>
@@ -41,32 +30,13 @@
       <q-card flat bordered class="bg-white">
         <!-- 검색 / 필터 영역 -->
         <q-card-section class="row items-center q-col-gutter-sm q-pb-none">
-          <q-input
-            dense
-            outlined
-            v-model="search"
-            placeholder="이름 / 주소 / 카테고리 검색"
-            clearable
-            class="col-12 col-md-5"
-            prepend-inner-icon="search"
-            @keyup.enter="triggerSearch"
-          />
+          <q-input dense outlined v-model="search" placeholder="이름 / 주소 / 카테고리 검색" clearable class="col-12 col-md-5"
+            prepend-inner-icon="search" @keyup.enter="triggerSearch" />
           <!-- ↑ 검색창 내부 스피너 제거 -->
 
-          <q-select
-            dense
-            outlined
-            v-model="categoryFilter"
-            :options="categoryOptions"
-            class="col-12 col-md-3"
-            emit-value
-            map-options
-            :option-label="opt => opt.label"
-            :option-value="opt => opt.value"
-            clear-icon="close"
-            label="카테고리 필터"
-            :disable="loading || searching"
-          >
+          <q-select dense outlined v-model="categoryFilter" :options="categoryOptions" class="col-12 col-md-3"
+            emit-value map-options :option-label="opt => opt.label" :option-value="opt => opt.value" clear-icon="close"
+            label="카테고리 필터" :disable="loading || searching">
             <template #prepend>
               <q-icon name="filter_list" />
             </template>
@@ -74,62 +44,50 @@
 
           <q-space />
 
-          <q-btn
-            flat
-            icon="refresh"
-            label="새로고침"
-            @click="load"
-            :disable="loading || searching"
-          />
+          <q-btn flat icon="refresh" label="새로고침" @click="load" :disable="loading || searching" />
+        </q-card-section>
+
+        <q-card-section class="row q-col-gutter-sm q-pt-sm">
+          <!-- 시도(Province) -->
+          <q-select class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedProvince"
+            :options="provinceOptions" :loading="addrLoading" label="시/도" hint="예) 서울특별시" clearable
+            @filter="filterProvince" @update:model-value="onProvinceChange" />
+
+          <!-- 시/구(City) -->
+          <q-select class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedCity"
+            :options="cityOptions" :loading="addrLoading" label="시/구" hint="예) 강남구" :disable="!selectedProvince"
+            clearable @filter="filterCity" @update:model-value="onCityChange" />
+
+          <!-- 동/읍/면(Town/EMD) -->
+          <q-select class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedTown"
+            :options="townOptions" :loading="addrLoading" label="동/읍/면" hint="예) 역삼1동" :disable="!selectedCity"
+            clearable @filter="filterTown" @update:model-value="onTownChange" />
+
+          <!-- 적용 버튼 (기존 흐름 보존, 최소 변경) -->
+          <div class="col-auto q-ml-sm">
+            <q-btn size="md" color="primary" label="주소필터 적용" :disable="addrApplyDisabled" @click="applyAddressFilter" />
+          </div>
         </q-card-section>
 
         <!-- 최근 검색어 영역 (칩 UI) -->
-        <q-card-section
-          v-if="recentSearches.length"
-          class="recent-section q-pt-sm q-pb-sm"
-        >
+        <q-card-section v-if="recentSearches.length" class="recent-section q-pt-sm q-pb-sm">
           <div class="row items-center no-wrap">
             <!-- 왼쪽: 칩들 -->
             <div class="col">
               <div class="row items-center q-gutter-xs recent-chip-row">
-                <q-chip
-                  v-for="keyword in recentSearches"
-                  :key="keyword"
-                  dense
-                  clickable
-                  outline
-                  color="primary"
-                  text-color="primary"
-                  class="recent-chip"
-                  @click="applyRecent(keyword)"
-                >
-                  <q-icon
-                    name="history"
-                    size="14px"
-                    class="q-mr-xs text-grey-6"
-                  />
+                <q-chip v-for="keyword in recentSearches" :key="keyword" dense clickable outline color="primary"
+                  text-color="primary" class="recent-chip" @click="applyRecent(keyword)">
+                  <q-icon name="history" size="14px" class="q-mr-xs text-grey-6" />
                   <span class="ellipsis">{{ keyword }}</span>
-                  <q-icon
-                    name="close"
-                    size="14px"
-                    class="q-ml-xs text-grey-5"
-                    @click.stop="removeRecent(keyword)"
-                  />
+                  <q-icon name="close" size="14px" class="q-ml-xs text-grey-5" @click.stop="removeRecent(keyword)" />
                 </q-chip>
               </div>
             </div>
 
             <!-- 오른쪽: 전체 삭제 버튼 -->
             <div class="col-auto">
-              <q-btn
-                flat
-                dense
-                size="sm"
-                class="text-primary"
-                icon="delete_outline"
-                label="전체 삭제"
-                @click="clearRecent"
-              />
+              <q-btn flat dense size="sm" class="text-primary" icon="delete_outline" label="전체 삭제"
+                @click="clearRecent" />
             </div>
           </div>
         </q-card-section>
@@ -142,60 +100,24 @@
             <q-spinner size="50px" />
           </q-inner-loading>
 
-          <q-list
-            bordered
-            separator
-            v-if="!loading && filtered.length"
-            class="rounded-borders"
-          >
-            <q-item
-              v-for="(r, idx) in filtered"
-              :key="r.id"
-              clickable
-              class="restaurant-item"
-              @click="goDetail(r.id)"
-            >
+          <q-list bordered separator v-if="!loading && filtered.length" class="rounded-borders">
+            <q-item v-for="(r, idx) in filtered" :key="r.id" clickable class="restaurant-item" @click="goDetail(r.id)">
               <!-- 번호 -->
               <q-item-section side class="gt-sm">
-                <q-badge
-                  color="grey-3"
-                  text-color="grey-8"
-                  class="text-weight-medium"
-                >
+                <q-badge color="grey-3" text-color="grey-8" class="text-weight-medium">
                   {{ idx + 1 }}
                 </q-badge>
               </q-item-section>
 
               <!-- 본문 -->
               <q-item-section>
-                <q-item-label
-                  class="text-weight-medium text-body1"
-                  v-html="highlight(r.restaurantName || '이름 없음')"
-                />
-                <q-item-label
-                  caption
-                  class="text-grey-7 q-mt-xs"
-                  v-html="highlight(r.address || '-')"
-                />
+                <q-item-label class="text-weight-medium text-body1" v-html="highlight(r.restaurantName || '이름 없음')" />
+                <q-item-label caption class="text-grey-7 q-mt-xs" v-html="highlight(r.address || '-')" />
                 <div class="row items-center q-gutter-xs q-mt-xs">
-                  <q-chip
-                    v-if="r.category"
-                    dense
-                    size="sm"
-                    color="primary"
-                    text-color="white"
-                    icon="local_dining"
-                  >
+                  <q-chip v-if="r.category" dense size="sm" color="primary" text-color="white" icon="local_dining">
                     {{ CATEGORY_LABEL_MAP[r.category] || r.category }}
                   </q-chip>
-                  <q-chip
-                    v-if="r.lat && r.lon"
-                    dense
-                    size="sm"
-                    outline
-                    color="grey-6"
-                    icon="place"
-                  >
+                  <q-chip v-if="r.lat && r.lon" dense size="sm" outline color="grey-6" icon="place">
                     {{ r.lat }}, {{ r.lon }}
                   </q-chip>
                 </div>
@@ -218,7 +140,12 @@ import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import {
   listRandomRestaurants,
-  searchRestaurants
+  searchRestaurants,
+  searchProvince,
+  searchCity,
+  searchTown,
+  getRestaurantsByAddress,
+  getRestaurantsByEmd,
 } from '@/api/restaurantApi'
 
 // 카테고리 정의
@@ -454,6 +381,92 @@ function highlight(text) {
     }
   })
   return result
+}
+const addrLoading = ref(false);
+const selectedProvince = ref(null);
+const selectedCity = ref(null);
+const selectedTown = ref(null);
+
+const provinceOptions = ref([]);
+const cityOptions = ref([]);
+const townOptions = ref([]);
+
+// 주소 필터 적용 버튼 활성/비활성
+const addrApplyDisabled = computed(() => {
+  // 시/도만 선택해도 적용 가능(광역 단위 조회), 시/구만 선택도 가능, 동 선택 시에는 emd API 사용
+  return !selectedProvince.value && !selectedCity.value && !selectedTown.value;
+});
+
+// --- [자동완성 필터러] ---
+async function filterProvince(val, update) {
+  if (!val) { update(() => (provinceOptions.value = [])); return; }
+  addrLoading.value = true;
+  const list = await searchProvince(val, 20); // 문자열 배열 응답
+  update(() => { provinceOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
+  addrLoading.value = false;
+}
+
+async function filterCity(val, update) {
+  if (!selectedProvince.value) { update(() => (cityOptions.value = [])); return; }
+  if (!val) { update(() => (cityOptions.value = [])); return; }
+  addrLoading.value = true;
+  const list = await searchCity(val, 20);
+  update(() => { cityOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
+  addrLoading.value = false;
+}
+
+async function filterTown(val, update) {
+  if (!selectedCity.value) { update(() => (townOptions.value = [])); return; }
+  if (!val) { update(() => (townOptions.value = [])); return; }
+  addrLoading.value = true;
+  const list = await searchTown(val, 20);
+  update(() => { townOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
+  addrLoading.value = false;
+}
+
+// --- [선택 체인지 핸들러] ---
+function onProvinceChange() {
+  // 상위가 바뀌면 하위 초기화
+  selectedCity.value = null;
+  selectedTown.value = null;
+  cityOptions.value = [];
+  townOptions.value = [];
+}
+function onCityChange() {
+  selectedTown.value = null;
+  townOptions.value = [];
+}
+function onTownChange() {
+  // 동이 확정되면 바로 적용하고 싶다면 여기서 applyAddressFilter() 호출 가능
+  // 지금은 사용자가 '주소필터 적용' 버튼을 누를 때만 호출(기존 UX 방해 최소화)
+}
+
+async function applyAddressFilter() {
+  try {
+    loading.value = true;
+
+    let res;
+    if (selectedTown.value) {
+      // 동 선택 시: emd API로 직접 검색
+      res = await getRestaurantsByEmd(selectedTown.value, 100);
+    } else {
+      // 시/도 또는 시/구 조합: address API
+      res = await getRestaurantsByAddress({
+        province: selectedProvince.value ?? undefined,
+        city: selectedCity.value ?? undefined,
+        town: undefined,
+        limit: 100,
+      });
+    }
+
+    // 응답 형태 표준화 (배열 or {data:[...]})
+    const list = Array.isArray(res) ? res : (res?.data ?? []);
+    rows.value = list;
+    search.value = '';
+
+  } finally {
+    loading.value = false;
+  }
 }
 </script>
 
