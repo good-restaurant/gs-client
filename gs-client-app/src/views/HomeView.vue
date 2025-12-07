@@ -2,11 +2,8 @@
   <q-page class="q-pa-md bg-white">
     <div class="column q-gutter-md">
 
-      <!-- 헤더 / 히어로 카드 -->
       <q-card flat bordered class="home-hero">
         <q-card-section class="row items-center justify-between no-wrap">
-
-          <!-- 왼쪽: 아이콘 + 텍스트 -->
           <div class="row items-center q-gutter-md">
             <q-avatar size="64px" color="primary" text-color="white" class="home-hero__avatar">
               <q-icon name="restaurant_menu" size="32px" />
@@ -23,20 +20,23 @@
             </div>
           </div>
 
-          <!-- 오른쪽: CTA 버튼 -->
           <div class="col-auto">
-            <q-btn color="primary" unelevated size="lg" class="home-hero__button" label="모범음식점 목록 보기" icon="list"
-              @click="goToRestaurants" />
+            <q-btn
+              color="primary"
+              unelevated
+              size="lg"
+              class="home-hero__button"
+              label="모범음식점 목록 보기"
+              icon="list"
+              @click="goToRestaurants"
+            />
           </div>
         </q-card-section>
       </q-card>
 
-      <!-- 하단: 좌/우 분할 -->
       <div class="home-bottom q-mt-md">
-
-        <!-- 왼쪽: 소개 카드 -->
         <div class="home-bottom-left">
-          <q-card flat bordered class="bg-white intro-card">
+          <q-card flat bordered class="bg-white intro-card home-bottom-card">
             <q-card-section>
               <div class="row items-center justify-between q-mb-sm">
                 <div class="text-subtitle1 text-weight-bold">
@@ -95,140 +95,24 @@
           </q-card>
         </div>
 
-        <!-- 오른쪽: 최근 댓글 -->
         <div class="home-bottom-right">
-          <q-card flat bordered class="recent-comments-card home-bottom-card">
-            <q-card-section>
-              <div class="row items-center justify-between q-mb-sm">
-                <div class="text-subtitle1 text-weight-bold">
-                  최근 리뷰
-                </div>
-                <q-chip dense color="secondary" text-color="white" outline>
-                  실시간 후기
-                </q-chip>
-              </div>
-
-              <q-separator spaced />
-
-              <div class="ticker-window">
-                <div
-                  v-for="item in visibleComments"
-                  :key="item._key"
-                  class="ticker-item row no-wrap items-center cursor-pointer"
-                  @click="goToRestaurantDetail(item.restaurantId)"
-                >
-                  <div class="col">
-                    <div class="text-body2 text-weight-bold one-line-ellipsis">
-                      {{ item.restaurantName }}
-                    </div>
-                    <div class="text-caption text-grey-7 one-line-ellipsis">
-                      {{ item.content }}
-                    </div>
-                  </div>
-
-                  <div class="col-auto text-right q-ml-md">
-                    <q-rating
-                      :model-value="item.rating"
-                      max="5"
-                      size="18px"
-                      color="amber"
-                      readonly
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="isLoading" class="text-caption text-grey-6 q-mt-sm">
-                최근 리뷰를 불러오는 중입니다...
-              </div>
-              <div v-else-if="!comments.length" class="text-caption text-grey-6 q-mt-sm">
-                아직 등록된 리뷰가 없습니다.
-              </div>
-            </q-card-section>
-          </q-card>
+          <RecentCommentsPanel />
         </div>
-
       </div>
+
     </div>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getRecentComments } from '@/api/restaurantApi'
+import RecentCommentsPanel from '@/components/RecentCommentsPanel.vue'
 
 const router = useRouter()
 
 const goToRestaurants = () => {
   router.push('/restaurants')
 }
-
-const goToRestaurantDetail = (id) => {
-  router.push(`/restaurants/${id}`)
-}
-
-const TICKER_VISIBLE_COUNT = 5
-const INTERVAL_MS = 2000
-
-const comments = ref([])
-const startIndex = ref(0)
-const isLoading = ref(false)
-
-let timerId = null
-let refreshTimerId = null
-
-const visibleComments = computed(() => {
-  if (!comments.value.length) return []
-
-  const result = []
-  const count = Math.min(TICKER_VISIBLE_COUNT, comments.value.length)
-
-  for (let i = 0; i < count; i++) {
-    const idx = (startIndex.value + i) % comments.value.length
-    const item = comments.value[idx]
-    result.push({
-      ...item,
-      _key: `${item.id}-${idx}`,
-    })
-  }
-
-  return result
-})
-
-async function fetchRecent() {
-  try {
-    isLoading.value = true
-    const list = await getRecentComments(20)
-    comments.value = list ?? []
-    startIndex.value = 0
-  } finally {
-    isLoading.value = false
-  }
-}
-
-function startTicker() {
-  timerId = setInterval(() => {
-    if (comments.value.length > 1) {
-      startIndex.value = (startIndex.value + 1) % comments.value.length
-    }
-  }, INTERVAL_MS)
-}
-
-onMounted(async () => {
-  await fetchRecent()
-  startTicker()
-
-  // 30초에 한번씩 실시간 댓글 가져오기 위해 api 재호출 (refresh)
-  refreshTimerId = setInterval(() => {
-    fetchRecent()
-  }, 30000)
-})
-
-onUnmounted(() => {
-  clearInterval(timerId)
-  clearInterval(refreshTimerId)
-})
 </script>
 
 <style scoped>
@@ -245,7 +129,6 @@ onUnmounted(() => {
   min-width: 170px;
 }
 
-/* 소개 리스트 들여쓰기 + 간격 */
 .home-list {
   padding-left: 1.2rem;
   margin: 0 0 0.4rem;
@@ -255,13 +138,11 @@ onUnmounted(() => {
   margin-bottom: 0.25rem;
 }
 
-/* 히어로 아래 영역: hero와 같은 왼쪽 여백을 쓰도록 flex로 직접 구성 */
 .home-bottom {
   display: flex;
   gap: 16px;
 }
 
-/* 데스크톱: 2:1 정도 비율 */
 .home-bottom-left {
   flex: 2 1 0;
 }
@@ -270,52 +151,19 @@ onUnmounted(() => {
   flex: 1 1 0;
 }
 
-/* 모바일: 위/아래로 쌓기 */
 @media (max-width: 1023.98px) {
   .home-bottom {
     flex-direction: column;
   }
 }
 
-/* 카드 radius 통일 */
 .intro-card {
   border-radius: 16px;
 }
 
-.recent-comments-card {
-  border-radius: 16px;
-  background: #fafafa;
-}
-
-/* 5개만 정확히 보이도록 높이 */
-.ticker-window {
-  overflow: hidden;
-  max-height: 360px;
-}
-
-.ticker-item {
-  padding: 10px 0;
-  min-height: 72px;
-  border-radius: 8px;
-}
-
-/* 한 줄 말줄임 */
-.one-line-ellipsis {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 @media (min-width: 1024px) {
-  /* 두 카드 높이를 같게 맞춤 (대략 댓글 카드 기준) */
   .home-bottom-card {
-    height: 420px; /* 필요하면 400~440 사이에서 미세조정 가능 */
-  }
-
-  /* 왼쪽은 내용이 넘치면 스크롤 */
-  .intro-card {
-    overflow-y: auto;
+    height: 420px;
   }
 }
-
 </style>

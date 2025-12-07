@@ -182,3 +182,16 @@ export async function getRecentComments(size = 20, page = 0) {
     createdAt: item.createdAt,
   }));
 }
+
+/** 최근 댓글 페이지 단위 조회 (Page<RestaurantCommentFullDto>) */
+export async function getRecentCommentsPage({
+  page = 0,
+  size = 10,
+  sort = 'createdAt,desc',
+} = {}) {
+  const res = await httpRequest('/restaurant-comment/recent', {
+    params: { page, size, sort },
+  });
+
+  return res?.data ?? res;
+}
