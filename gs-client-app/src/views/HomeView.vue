@@ -176,7 +176,6 @@ const startIndex = ref(0)
 const isLoading = ref(false)
 
 let timerId = null
-let refreshTimerId = null
 
 const visibleComments = computed(() => {
   if (!comments.value.length) return []
@@ -218,16 +217,10 @@ function startTicker() {
 onMounted(async () => {
   await fetchRecent()
   startTicker()
-
-  // 30초에 한번씩 실시간 댓글 가져오기 위해 api 재호출 (refresh)
-  refreshTimerId = setInterval(() => {
-    fetchRecent()
-  }, 30000)
 })
 
 onUnmounted(() => {
   clearInterval(timerId)
-  clearInterval(refreshTimerId)
 })
 </script>
 
