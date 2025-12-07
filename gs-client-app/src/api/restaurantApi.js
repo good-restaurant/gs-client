@@ -158,40 +158,57 @@ export async function getCommentById(id) {
 
 /** 최근 댓글 20개 조회 (응답에서 content만 뽑기, pageable default 값으로 사용) */
 export async function getRecentComments(size = 20, page = 0) {
-  const res = await httpRequest('/restaurant-comment/recent', {
-    params: {
-      page,
-      size,
-      sort: 'createdAt,desc',
-    },
-  });
+    const res = await httpRequest('/restaurant-comment/recent', {
+        params: {
+            page,
+            size,
+            sort: 'createdAt,desc',
+        },
+    });
 
-  const content = Array.isArray(res?.content)
-    ? res.content
-    : Array.isArray(res?.data?.content)
-    ? res.data.content
-    : [];
+    const content = Array.isArray(res?.content)
+        ? res.content
+        : Array.isArray(res?.data?.content)
+            ? res.data.content
+            : [];
 
-  return content.map((item) => ({
-    id: item.id,
-    content: item.content,
-    rating: item.rating,
-    displayName: item.displayName,
-    restaurantId: item.restaurant?.id,
-    restaurantName: item.restaurant?.restaurantName,
-    createdAt: item.createdAt,
-  }));
+    return content.map((item) => ({
+        id: item.id,
+        content: item.content,
+        rating: item.rating,
+        displayName: item.displayName,
+        restaurantId: item.restaurant?.id,
+        restaurantName: item.restaurant?.restaurantName,
+        createdAt: item.createdAt,
+    }));
 }
 
 /** 최근 댓글 페이지 단위 조회 (Page<RestaurantCommentFullDto>) */
 export async function getRecentCommentsPage({
-  page = 0,
-  size = 10,
-  sort = 'createdAt,desc',
+    page = 0,
+    size = 10,
+    sort = 'createdAt,desc',
 } = {}) {
-  const res = await httpRequest('/restaurant-comment/recent', {
-    params: { page, size, sort },
-  });
+    const res = await httpRequest('/restaurant-comment/recent', {
+        params: { page, size, sort },
+    });
 
-  return res?.data ?? res;
+    return res?.data ?? res;
+}
+
+/** 주소 자동완성 (시도) */
+export async function searchProvince(q, limit = 20) {
+    return httpRequest('/address-list/search/province', { params: { q, limit } });
+}
+/** 주소 자동완성 (시/구) */
+export async function searchCity(q, limit = 20) {
+    return httpRequest('/address-list/search/city', { params: { q, limit } });
+}
+/** 주소 자동완성 (동/읍/면) */
+export async function searchTown(q, limit = 20) {
+    return httpRequest('/address-list/search/town', { params: { q, limit } });
+}
+/** 시도/시군구/읍면동 조합 조회 */
+export async function getRestaurantsByAddress({ province, city, town, limit = 100 }) {
+    return httpRequest('/v3/restaurant/address', { params: { province, city, town, limit } });
 }
