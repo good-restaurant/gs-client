@@ -25,8 +25,15 @@
 
           <!-- 오른쪽: CTA 버튼 -->
           <div class="col-auto">
-            <q-btn color="primary" unelevated size="lg" class="home-hero__button" label="모범음식점 목록 보기" icon="list"
-              @click="goToRestaurants" />
+            <q-btn
+              color="primary"
+              unelevated
+              size="lg"
+              class="home-hero__button"
+              label="모범음식점 목록 보기"
+              icon="list"
+              @click="goToRestaurants"
+            />
           </div>
         </q-card-section>
       </q-card>
@@ -36,7 +43,7 @@
 
         <!-- 왼쪽: 소개 카드 -->
         <div class="home-bottom-left">
-          <q-card flat bordered class="bg-white intro-card">
+          <q-card flat bordered class="bg-white intro-card home-bottom-card">
             <q-card-section>
               <div class="row items-center justify-between q-mb-sm">
                 <div class="text-subtitle1 text-weight-bold">
@@ -99,7 +106,12 @@
         <div class="home-bottom-right">
           <q-card flat bordered class="recent-comments-card home-bottom-card">
             <q-card-section>
-              <div class="row items-center justify-between q-mb-sm">
+
+              <!-- 상단 클릭 시 전체보기 모달 -->
+              <div
+                class="row items-center justify-between q-mb-sm cursor-pointer"
+                @click="openRecentDialog"
+              >
                 <div class="text-subtitle1 text-weight-bold">
                   최근 리뷰
                 </div>
@@ -115,7 +127,7 @@
                   v-for="item in visibleComments"
                   :key="item._key"
                   class="ticker-item row no-wrap items-center cursor-pointer"
-                  @click="goToRestaurantDetail(item.restaurantId)"
+                  @click.stop="goToRestaurantDetail(item.restaurantId)"
                 >
                   <div class="col">
                     <div class="text-body2 text-weight-bold one-line-ellipsis">
@@ -149,6 +161,62 @@
         </div>
 
       </div>
+
+      <!-- 최근 리뷰 전체보기 모달 -->
+      <q-dialog v-model="isRecentDialogOpen">
+        <q-card class="recent-modal-card">
+          <q-card-section class="row items-center justify-between">
+            <div class="text-subtitle1 text-weight-bold">
+              최근 리뷰 전체 보기
+            </div>
+            <q-btn icon="close" flat round dense v-close-popup />
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section class="q-pa-none recent-modal-list">
+            <q-list bordered separator>
+              <q-item
+                v-for="item in recentModalComments"
+                :key="item.id"
+                clickable
+                @click="goToRestaurantDetail(item.restaurantId)"
+              >
+                <q-item-section>
+                  <q-item-label class="text-body2 text-weight-bold">
+                    {{ item.restaurantName }}
+                  </q-item-label>
+                  <q-item-label class="text-caption">
+                    {{ item.content }}
+                  </q-item-label>
+                </q-item-section>
+                <q-item-section side top>
+                  <q-rating
+                    :model-value="item.rating"
+                    max="5"
+                    size="18px"
+                    color="amber"
+                    readonly
+                  />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-card-section>
+
+          <q-separator />
+
+          <q-card-section class="row justify-center q-pt-sm q-pb-md">
+            <q-pagination
+              v-model="recentPageDisplay"
+              :max="recentTotalPages || 1"
+              boundary-numbers
+              direction-links
+              size="sm"
+            />
+          </q-card-section>
+        </q-card>
+      </q-dialog>
+
     </div>
   </q-page>
 </template>
@@ -156,7 +224,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getRecentComments } from '@/api/restaurantApi'
+import { getRecentComments, getRecentCommentsPage } from '@/api/restaurantApi'
 
 const router = useRouter()
 
@@ -222,6 +290,56 @@ onMounted(async () => {
 onUnmounted(() => {
   clearInterval(timerId)
 })
+
+const isRecentDialogOpen = ref(false)
+const recentModalComments = ref([])
+const isRecentModalLoading = ref(false)
+const recentPage = ref(0)
+const recentSize = ref(5)
+const recentTotalPages = ref(0)
+
+const recentPageDisplay = computed({
+  get() {
+    return recentPage.value + 1
+  },
+  set(val) {
+    loadRecentPage(val - 1)
+  },
+})
+
+async function loadRecentPage(page = 0) {
+  isRecentModalLoading.value = true
+  try {
+    const pageData = await getRecentCommentsPage({
+      page,
+      size: recentSize.value,
+      sort: 'createdAt,desc',
+    })
+
+    const content = Array.isArray(pageData?.content) ? pageData.content : []
+
+    const mapped = content.map((item) => ({
+      id: item.id,
+      content: item.content,
+      rating: item.rating,
+      displayName: item.displayName,
+      restaurantId: item.restaurant?.id,
+      restaurantName: item.restaurant?.restaurantName,
+      createdAt: item.createdAt,
+    }))
+
+    recentModalComments.value = mapped
+    recentPage.value = pageData.number ?? page
+    recentTotalPages.value = pageData.totalPages ?? 1
+  } finally {
+    isRecentModalLoading.value = false
+  }
+}
+
+async function openRecentDialog() {
+  isRecentDialogOpen.value = true
+  await loadRecentPage(0)
+}
 </script>
 
 <style scoped>
@@ -248,13 +366,12 @@ onUnmounted(() => {
   margin-bottom: 0.25rem;
 }
 
-/* 히어로 아래 영역: hero와 같은 왼쪽 여백을 쓰도록 flex로 직접 구성 */
+/* 히어로 아래 영역 */
 .home-bottom {
   display: flex;
   gap: 16px;
 }
 
-/* 데스크톱: 2:1 정도 비율 */
 .home-bottom-left {
   flex: 2 1 0;
 }
@@ -280,7 +397,7 @@ onUnmounted(() => {
   background: #fafafa;
 }
 
-/* 5개만 정확히 보이도록 높이 */
+/* 댓글 5개만 보이도록 */
 .ticker-window {
   overflow: hidden;
   max-height: 360px;
@@ -299,16 +416,25 @@ onUnmounted(() => {
   text-overflow: ellipsis;
 }
 
+/* 데스크톱에서 좌/우 카드 높이 맞추기 */
 @media (min-width: 1024px) {
-  /* 두 카드 높이를 같게 맞춤 (대략 댓글 카드 기준) */
   .home-bottom-card {
-    height: 420px; /* 필요하면 400~440 사이에서 미세조정 가능 */
-  }
-
-  /* 왼쪽은 내용이 넘치면 스크롤 */
-  .intro-card {
-    overflow-y: auto;
+    height: 420px;
   }
 }
 
+/* 모달 카드 */
+.recent-modal-card {
+  width: 90vw;
+  max-width: 720px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+}
+
+.recent-modal-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
 </style>
