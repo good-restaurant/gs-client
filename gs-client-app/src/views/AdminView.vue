@@ -43,19 +43,49 @@
 
       <!-- 리스트 카드 -->
       <q-card flat bordered class="bg-white">
-        <!-- 검색 영역 -->
-        <q-card-section class="row items-center q-col-gutter-sm q-pb-none">
+        <!-- 검색 / 필터 영역 -->
+        <q-card-section class="row q-col-gutter-sm q-pb-none items-center">
+          <!-- 검색창만 단독 -->
           <q-input
             dense
             outlined
             v-model="search"
-            placeholder="음식점 이름 검색"
+            placeholder="이름 / 주소 / 카테고리 검색"
             clearable
             class="col-12 col-md-4"
             prepend-inner-icon="search"
+            @keyup.enter="triggerSearch"
           />
+
+          <!-- 카테고리 필터 -->
+          <q-select
+            dense
+            outlined
+            v-model="categoryFilter"
+            :options="categoryOptions"
+            class="col-12 col-md-3"
+            emit-value
+            map-options
+            :option-label="opt => opt.label"
+            :option-value="opt => opt.value"
+            clear-icon="close"
+            label="카테고리 필터"
+            :disable="loading || searching"
+          >
+            <template #prepend>
+              <q-icon name="filter_list" />
+            </template>
+          </q-select>
+
           <q-space />
-          <q-btn flat icon="refresh" label="새로고침" @click="load()" />
+
+          <q-btn
+            flat
+            icon="refresh"
+            label="새로고침"
+            @click="load"
+            :disable="loading || searching"
+          />
         </q-card-section>
 
         <q-separator spaced />
@@ -66,26 +96,41 @@
             <q-spinner size="50px" />
           </q-inner-loading>
 
-          <q-list bordered separator v-if="!loading && filtered.length" class="rounded-borders">
-            <q-item v-for="(r, idx) in filtered" :key="r.id" class="restaurant-item">
+          <q-list
+            bordered
+            separator
+            v-if="!loading && filtered.length"
+            class="rounded-borders"
+          >
+            <q-item
+              v-for="(r, idx) in filtered"
+              :key="r.id"
+              clickable
+              class="restaurant-item"
+              @click="goAdminDetail(r.id)"
+            >
               <!-- 번호 -->
               <q-item-section side class="gt-sm">
-                <q-badge color="grey-3" text-color="grey-8" class="text-weight-medium">
+                <q-badge
+                  color="grey-3"
+                  text-color="grey-8"
+                  class="text-weight-medium"
+                >
                   {{ idx + 1 }}
                 </q-badge>
               </q-item-section>
 
               <!-- 본문 -->
               <q-item-section>
-                <q-item-label class="text-weight-medium text-body1">
-                  {{ r.restaurantName || '이름 없음' }}
-                </q-item-label>
-
-                <q-item-label caption class="text-grey-7 q-mt-xs">
-                  {{ r.address || '-' }}
-                </q-item-label>
-
-                <!-- 🔹 목록 페이지와 동일한 카테고리/좌표 칩 -->
+                <q-item-label
+                  class="text-weight-medium text-body1"
+                  v-html="highlight(r.restaurantName || '이름 없음')"
+                />
+                <q-item-label
+                  caption
+                  class="text-grey-7 q-mt-xs"
+                  v-html="highlight(r.address || '-')"
+                />
                 <div class="row items-center q-gutter-xs q-mt-xs">
                   <q-chip
                     v-if="r.category"
@@ -97,8 +142,14 @@
                   >
                     {{ CATEGORY_LABEL_MAP[r.category] || r.category }}
                   </q-chip>
-
-                  <q-chip v-if="r.lat && r.lon" dense size="sm" outline color="grey-6" icon="place">
+                  <q-chip
+                    v-if="r.lat && r.lon"
+                    dense
+                    size="sm"
+                    outline
+                    color="grey-6"
+                    icon="place"
+                  >
                     {{ r.lat }}, {{ r.lon }}
                   </q-chip>
                 </div>
@@ -111,7 +162,7 @@
                   flat
                   round
                   icon="edit"
-                  @click="openEdit(r)"
+                  @click.stop="openEdit(r)"
                   :aria-label="`${r.restaurantName} 수정`"
                 />
                 <q-btn
@@ -120,7 +171,7 @@
                   round
                   icon="delete"
                   color="negative"
-                  @click="confirmDelete(r)"
+                  @click.stop="confirmDelete(r)"
                   :aria-label="`${r.restaurantName} 삭제`"
                 />
               </q-item-section>
@@ -129,8 +180,8 @@
 
           <div v-else-if="!loading" class="text-grey text-center q-mt-xl">
             표시할 데이터가 없습니다. <br />
-            상단의 <span class="text-primary text-weight-medium">[새 음식점 추가]</span> 버튼으로 첫
-            번째 데이터를 등록해 보세요.
+            상단의 <span class="text-primary text-weight-medium">[새 음식점 추가]</span>
+            버튼으로 첫 번째 데이터를 등록해 보세요.
           </div>
         </q-card-section>
       </q-card>
@@ -194,18 +245,25 @@
 </template>
 
 <script setup>
-import {
-  createRestaurant
-} from '@/api/authRestaurantApi'
-import {
-  deleteRestaurant, // TODO: listRandomRestaurants 사용 시 삭제 필요
-  listRandomRestaurants,
-  updateRestaurant
-} from '@/api/restaurantApi'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
-import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+// 관리자용 API (생성/수정/삭제)
+import {
+  createRestaurant,
+  updateRestaurant,
+  deleteRestaurant
+} from '@/api/authRestaurantApi'
+
+// 공개 API (검색/랜덤)
+import {
+  listRandomRestaurants,
+  searchRestaurants
+} from '@/api/restaurantApi'
 
 const $q = useQuasar()
+const router = useRouter()
 
 // enum → 한글 라벨 매핑
 const CATEGORY_LABEL_MAP = {
@@ -213,7 +271,7 @@ const CATEGORY_LABEL_MAP = {
   KOREAN: '한식',
   CHINESE: '중식',
   JAPANESE: '일식',
-  WESTERN: '양식',
+  WESTERN: '양식'
 }
 
 // 선택용 옵션
@@ -222,45 +280,131 @@ const categorySelectOptions = [
   { label: '중식', value: 'CHINESE' },
   { label: '일식', value: 'JAPANESE' },
   { label: '양식', value: 'WESTERN' },
-  { label: '기타', value: 'ETC' },
+  { label: '기타', value: 'ETC' }
 ]
 
 const search = ref('')
 const loading = ref(false)
+const searching = ref(false)
 const rows = ref([])
 
-const dialog = ref({
-  open: false,
-  mode: 'create', // 'create' | 'edit'
-  target: null,
+const searchDebounceTimer = ref(null)
+
+// 카테고리 필터
+const categoryFilter = ref('all')
+const categoryOptions = computed(() => {
+  const set = new Set()
+  rows.value.forEach(r => {
+    if (r.category) set.add(r.category)
+  })
+  const list = Array.from(set).sort((a, b) => a.localeCompare(b, 'ko'))
+  return [
+    { label: '전체 카테고리', value: 'all' },
+    ...list.map(c => ({
+      label: CATEGORY_LABEL_MAP[c] || c,
+      value: c
+    }))
+  ]
 })
 
-const form = ref({
-  id: null,
-  restaurantName: '',
-  category: null,
-  address: '',
-  lat: null,
-  lon: null,
-})
-
+// 검색 + 카테고리 필터 적용한 리스트
 const filtered = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q) return rows.value
-  return rows.value.filter((r) => {
+  const q = (search.value ?? '').trim().toLowerCase()
+  const cat = categoryFilter.value
+
+  const filteredList = rows.value.filter(r => {
     const name = (r.restaurantName || '').toLowerCase()
-    return name.includes(q)
+    const category = (r.category || '').toLowerCase()
+    const addr = (r.address || '').toLowerCase()
+
+    const matchSearch =
+      !q || name.includes(q) || category.includes(q) || addr.includes(q)
+
+    const matchCategory =
+      cat === 'all' || (r.category && r.category === cat)
+
+    return matchSearch && matchCategory
+  })
+
+  // 이름 매칭 → 주소 매칭 → 그 외, 각 그룹 내에서는 이름 가나다순
+  return filteredList.sort((a, b) => {
+    const qLower = q
+
+    const aName = (a.restaurantName || '').toLowerCase()
+    const bName = (b.restaurantName || '').toLowerCase()
+    const aAddr = (a.address || '').toLowerCase()
+    const bAddr = (b.address || '').toLowerCase()
+
+    const aMatchName = qLower && aName.includes(qLower)
+    const bMatchName = qLower && bName.includes(qLower)
+    if (aMatchName && !bMatchName) return -1
+    if (!aMatchName && bMatchName) return 1
+
+    const aMatchAddr = qLower && aAddr.includes(qLower)
+    const bMatchAddr = qLower && bAddr.includes(qLower)
+    if (aMatchAddr && !bMatchAddr) return -1
+    if (!aMatchAddr && bMatchAddr) return 1
+
+    return String(a.restaurantName || '').localeCompare(
+      String(b.restaurantName || ''),
+      'ko'
+    )
   })
 })
 
 onMounted(load)
 
+watch(search, async (v) => {
+  const raw = v ?? ''
+
+  // 완전히 비워졌을 때
+  if (!raw) {
+    if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+    searching.value = false
+    await load()
+    return
+  }
+
+  if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+  searching.value = true
+  searchDebounceTimer.value = setTimeout(async () => {
+    await load()
+    searching.value = false
+  }, 500)
+})
+
+async function triggerSearch() {
+  const text = (search.value ?? '').trim()
+
+  if (searchDebounceTimer.value) clearTimeout(searchDebounceTimer.value)
+
+  if (!text) {
+    searching.value = false
+    await load()
+    return
+  }
+
+  searching.value = true
+  await load()
+  searching.value = false
+}
+
 async function load() {
   loading.value = true
   try {
-    rows.value = await listRandomRestaurants(100)
+    const qRaw = search.value ?? ''
+    const q = qRaw.trim()
+
+    if (q) {
+      rows.value = await searchRestaurants(q, 100)
+    } else {
+      rows.value = await listRandomRestaurants(100)
+    }
   } catch (e) {
-    $q.notify({ type: 'negative', message: e.message || '목록 조회 실패' })
+    $q.notify({
+      type: 'negative',
+      message: e.message || '목록 조회 실패'
+    })
   } finally {
     loading.value = false
   }
@@ -274,7 +418,7 @@ function openCreate() {
     category: null,
     address: '',
     lat: null,
-    lon: null,
+    lon: null
   }
 }
 
@@ -286,7 +430,7 @@ function openEdit(row) {
     category: row.category ?? null,
     address: row.address ?? '',
     lat: row.lat ?? null,
-    lon: row.lon ?? null,
+    lon: row.lon ?? null
   }
 }
 
@@ -308,7 +452,7 @@ async function submitDialog() {
       lat: form.value.lat ?? 0,
       ctpKorNm: '',
       sigKorNm: '',
-      emdKorNm: '',
+      emdKorNm: ''
     }
 
     if (dialog.value.mode === 'create') {
@@ -331,7 +475,7 @@ function confirmDelete(row) {
     title: '삭제 확인',
     message: `[${row.restaurantName}] 항목을 삭제할까요?`,
     cancel: true,
-    persistent: true,
+    persistent: true
   }).onOk(async () => {
     try {
       await deleteRestaurant(row.id)
@@ -342,6 +486,58 @@ function confirmDelete(row) {
     }
   })
 }
+
+function goAdminDetail(id) {
+  if (!id) return
+  router.push({ name: 'admin-restaurant-detail', params: { id } })
+}
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+function highlight(text) {
+  const base = text ?? ''
+  const q = (search.value ?? '').trim()
+  if (!q) return escapeHtml(base)
+
+  const escapedQuery = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const regex = new RegExp(escapedQuery, 'gi')
+  const matches = base.match(regex)
+  if (!matches) return escapeHtml(base)
+
+  const parts = base.split(regex)
+  let result = ''
+  parts.forEach((part, idx) => {
+    result += escapeHtml(part)
+    if (idx < matches.length) {
+      result += `<span class="text-negative text-weight-bold">${escapeHtml(
+        matches[idx]
+      )}</span>`
+    }
+  })
+  return result
+}
+
+const dialog = ref({
+  open: false,
+  mode: 'create',
+  target: null
+})
+
+const form = ref({
+  id: null,
+  restaurantName: '',
+  category: null,
+  address: '',
+  lat: null,
+  lon: null
+})
 </script>
 
 <style scoped>

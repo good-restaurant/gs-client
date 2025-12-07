@@ -10,7 +10,8 @@
         <q-separator />
 
         <!-- 작성/수정 폼 -->
-        <q-card-section>
+        <!-- admin 모드에서는 수정 중일 때만 폼 노출 -->
+        <q-card-section v-if="!admin || editId">
             <q-form @submit.prevent="onSubmit" class="q-gutter-md">
                 <q-input v-model="form.content" type="textarea" autogrow label="내용" :counter="500" maxlength="500"
                     outlined dense required />
@@ -43,7 +44,9 @@
                         </div>
                         <div class="q-mt-xs">{{ c.content }}</div>
                     </q-item-section>
-                    <q-item-section side top>
+
+                    <!-- 관리자 모드에서만 수정/삭제 버튼 노출 -->
+                    <q-item-section v-if="admin" side top>
                         <div class="column items-end q-gutter-xs">
                             <q-btn dense flat icon="edit" @click="beginEdit(c)" />
                             <q-btn dense flat icon="delete" color="negative" @click="remove(c.id)"
@@ -77,6 +80,7 @@ import {
 
 const props = defineProps({
     restaurantId: { type: [Number, String], required: true },
+    admin: { type: Boolean, default: false },
 });
 
 const $q = useQuasar();
@@ -91,6 +95,8 @@ const size = ref(10);
 const sort = ref('createdAt,desc');
 const comments = ref([]);
 const totalElements = ref(null); // 백엔드가 total을 안 주면 null 유지
+const pageHasMore = ref(false);
+
 const maxPage = computed(() => {
     if (typeof totalElements.value === 'number') {
         return Math.max(1, Math.ceil(totalElements.value / size.value));
@@ -98,7 +104,6 @@ const maxPage = computed(() => {
     // total이 없을 때는 "다음 페이지 데이터 유무"로 한 페이지 더 허용
     return pageHasMore.value ? page.value + 1 : page.value;
 });
-const pageHasMore = ref(false);
 
 // 임시 표시용 평점(읽기 전용)
 const tmpRatings = reactive({});
@@ -141,19 +146,16 @@ async function reload() {
         const hasNext = typeof res?.last === 'boolean' ? !res.last : (list.length === size.value);
         pageHasMore.value = hasNext;
 
-        // 읽기 전용 평점 채우기
-        tmpRatings_clear();
-        list.forEach(c => { tmpRatings[c.id] = Number(c.rating || 0); });
+        Object.keys(tmpRatings).forEach(k => delete tmpRatings[k]);
+        list.forEach(c => {
+            tmpRatings[c.id] = Number(c.rating || 0);
+        });
     } catch (e) {
         console.error(e);
         $q.notify({ type: 'negative', message: e.message || '댓글을 불러오지 못했습니다.' });
     } finally {
         loading.value = false;
     }
-}
-
-function tmpRatings_clear() {
-    Object.keys(tmpRatings).forEach(k => delete tmpRatings[k]);
 }
 
 async function onSubmit() {
@@ -171,6 +173,10 @@ async function onSubmit() {
             });
             $q.notify({ type: 'positive', message: '댓글이 수정되었습니다.' });
         } else {
+            if (props.admin) {
+                submitting.value = false;
+                return;
+            }
             await createComment({
                 restaurantId: props.restaurantId,
                 content: form.content.trim(),
@@ -190,6 +196,7 @@ async function onSubmit() {
 }
 
 function beginEdit(c) {
+    if (!props.admin) return;
     editId.value = c.id;
     form.content = c.content || '';
     form.rating = Number(c.rating || 0);
@@ -197,12 +204,13 @@ function beginEdit(c) {
 }
 
 async function remove(id) {
+    if (!props.admin) return;
     deletingId.value = id;
     try {
         await deleteComment(id);
         $q.notify({ type: 'positive', message: '삭제되었습니다.' });
         if (comments.value.length === 1 && page.value > 1) {
-            page.value = page.value - 1; // 마지막 1개 삭제 시 이전 페이지로
+            page.value = page.value - 1;
         }
         await reload();
     } catch (e) {
@@ -214,7 +222,6 @@ async function remove(id) {
 }
 
 watchEffect(() => {
-    // 레스토랑 변경 시 초기화 후 재조회
     resetForm();
     page.value = 1;
     if (props.restaurantId) reload();
