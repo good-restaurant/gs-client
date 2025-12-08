@@ -393,7 +393,8 @@ const townOptions = ref([]);
 
 // 주소 필터 적용 버튼 활성/비활성
 const addrApplyDisabled = computed(() => {
-  // 시/도만 선택해도 적용 가능(광역 단위 조회), 시/구만 선택도 가능, 동 선택 시에는 emd API 사용
+  // 시/도만 선택해도 적용 가능(광역 단위 조회), 시/구만 선택도 가능
+  // 동까지 입력하면 클라이언트에서 한 번 더 필터링
   return !selectedProvince.value && !selectedCity.value && !selectedTown.value;
 });
 
@@ -445,25 +446,31 @@ async function applyAddressFilter() {
   try {
     loading.value = true;
 
-    let res;
-    if (selectedTown.value) {
-      // 동 선택 시: emd API로 직접 검색
-      res = await getRestaurantsByEmd(selectedTown.value, 100);
-    } else {
-      // 시/도 또는 시/구 조합: address API
-      res = await getRestaurantsByAddress({
-        province: selectedProvince.value ?? undefined,
-        city: selectedCity.value ?? undefined,
-        town: undefined,
-        limit: 100,
-      });
-    }
+    // 1차: 시/도 + 시/구 기준으로 서버에서 목록 조회
+    const res = await getRestaurantsByAddress({
+      province: selectedProvince.value ?? undefined,
+      city: selectedCity.value ?? undefined,
+      town: undefined,
+      limit: 300, // 필요하면 조정
+    });
 
-    // 응답 형태 표준화 (배열 or {data:[...]})
-    const list = Array.isArray(res) ? res : (res?.data ?? []);
+    const baseList = Array.isArray(res) ? res : (res?.data ?? []);
+
+    // 2차: 동/읍/면이 입력돼 있으면 클라이언트에서 한 번 더 필터링
+    const townKeyword = (selectedTown.value || '').trim();
+
+    const list = townKeyword
+      ? baseList.filter((item) => {
+        const emd = String(item.emdKorNm ?? '');
+        const addr = String(item.address ?? '');
+        // emd 컬럼 우선, 없으면 주소 문자열에서 포함 여부 확인
+        return emd.includes(townKeyword) || addr.includes(townKeyword);
+      })
+      : baseList;
+
     rows.value = list;
+    // 이름/주소/카테고리 검색어는 초기화 (주소 필터만 적용)
     search.value = '';
-
   } finally {
     loading.value = false;
   }
