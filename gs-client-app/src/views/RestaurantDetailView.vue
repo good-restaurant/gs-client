@@ -289,21 +289,21 @@ onMounted(() => {
 
       <!-- Header -->
       <q-card-section class="row items-center q-gutter-sm">
-        <q-btn flat round icon="arrow_back" @click="goBack" />
+        <q-btn flat round icon="arrow_back" @click="goBack"/>
         <div class="text-h6 text-weight-bold">
           {{ restaurant?.restaurantName || '가게 상세 정보' }}
         </div>
-        <q-space />
+        <q-space/>
         <q-chip v-if="restaurant?.category" outline color="primary" text-color="primary">
           {{ restaurant.category }}
         </q-chip>
       </q-card-section>
 
-      <q-separator inset />
+      <q-separator inset/>
 
       <!-- Loading -->
       <q-inner-loading :showing="loading">
-        <q-spinner size="40px" />
+        <q-spinner size="40px"/>
       </q-inner-loading>
 
       <!-- Tabs -->
@@ -315,13 +315,13 @@ onMounted(() => {
         align="justify"
         class="q-mt-sm"
       >
-        <q-tab name="home" label="홈" />
-        <q-tab name="photos" :label="`사진 (${pictureUrls.length})`" /> <!-- changed: 사진 개수 표시 -->
-        <q-tab name="menus" :label="`메뉴 (${menus.length})`" /> <!-- changed: 메뉴 개수 표시 -->
-        <q-tab name="reviews" :label="`리뷰 (${reviews.length})`" /> <!-- changed: 리뷰 개수 표시 -->
+        <q-tab name="home" label="홈"/>
+        <q-tab name="photos" :label="`사진 (${pictureUrls.length})`"/> <!-- changed: 사진 개수 표시 -->
+        <q-tab name="menus" :label="`메뉴 (${menus.length})`"/> <!-- changed: 메뉴 개수 표시 -->
+        <q-tab name="reviews" :label="`리뷰 (${reviews.length})`"/> <!-- changed: 리뷰 개수 표시 -->
       </q-tabs>
 
-      <q-separator />
+      <q-separator/>
 
       <!-- TAB PANELS -->
       <q-tab-panels v-model="currentTab" animated>
@@ -354,17 +354,17 @@ onMounted(() => {
             </div>
           </q-card-section>
 
-          <q-separator class="q-my-lg" />
+          <q-separator class="q-my-lg"/>
 
           <!-- 사진 미리보기 -->
           <q-card-section>
             <div class="row items-center q-mb-sm">
               <div class="text-subtitle1 text-weight-bold">사진</div>
-              <q-space />
+              <q-space/>
               <div class="text-caption text-grey-7">
                 총 {{ pictureUrls.length }}개
               </div>
-              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'photos'" />
+              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'photos'"/>
             </div>
 
             <div v-if="pictureUrls.length" class="row q-col-gutter-md">
@@ -373,25 +373,26 @@ onMounted(() => {
                 :key="p.id"
                 class="col-6 col-sm-4 col-md-3"
               >
-                <q-img :src="p.url" :ratio="4/3" class="rounded-borders shadow-1 hover-scale" basic spinner-color="primary" />
+                <q-img :src="p.url" :ratio="4/3" class="rounded-borders shadow-1 hover-scale" basic
+                       spinner-color="primary"/>
               </div>
             </div>
 
             <div v-else class="text-grey q-mt-sm">등록된 사진이 없습니다.</div>
           </q-card-section>
 
-          <q-separator class="q-my-lg" />
+          <q-separator class="q-my-lg"/>
 
           <!-- 메뉴 미리보기 -->
           <q-card-section>
             <div class="row items-center q-mb-sm">
               <div class="text-subtitle1 text-weight-bold">메뉴</div>
-              <q-space />
+              <q-space/>
 
               <div class="text-caption text-grey-7">
                 총 {{ menus.length }}개
               </div>
-              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'menus'" />
+              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'menus'"/>
             </div>
 
             <div v-if="menus.length" class="column q-gutter-sm">
@@ -414,24 +415,32 @@ onMounted(() => {
             <div v-else class="text-grey q-mt-sm">등록된 메뉴가 없습니다.</div>
           </q-card-section>
 
-          <q-separator class="q-my-lg" />
+          <q-separator class="q-my-lg"/>
 
           <!-- 리뷰 미리보기 -->
           <q-card-section>
             <div class="row items-center q-mb-sm">
               <div class="text-subtitle1 text-weight-bold">리뷰</div>
-              <q-space />
+              <q-space/>
               <div class="text-caption text-grey-7">
                 총 {{ reviews.length }}개
               </div>
-              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'reviews'" />
+              <q-btn flat color="primary" label="전체보기" @click="currentTab = 'reviews'"/>
             </div>
 
-            <div v-if="reviews.length">
-              <div v-for="r in reviews.slice(0, 3)" :key="r.id" class="q-mb-md">
-                <div class="text-body1 text-weight-medium">{{ r.userName }}</div>
-                <div class="text-body2 text-grey-8">{{ r.comment }}</div>
-              </div>
+            <div v-if="reviews.length" class="column q-gutter-sm">
+              <q-card
+                v-for="r in reviews.slice(0, 3)"
+                :key="r.id"
+                flat
+                bordered
+                class="q-pa-md menu-row-card hover-light"
+              >
+                <div>
+                  <div class="text-body2 text-grey-8">{{ r.displayName ? r.displayName : "익명" }}</div>
+                  <div class="text-body1 text-weight-medium">{{ r.content }}</div>
+                </div>
+              </q-card>
             </div>
 
             <div v-else class="text-grey q-mt-sm">등록된 리뷰가 없습니다.</div>
@@ -448,24 +457,24 @@ onMounted(() => {
               <div class="text-subtitle1 text-weight-medium col-12 col-md-3">사진 업로드</div>
               <div class="col-12 col-md-6">
                 <q-file v-model="selectedFile" dense outlined accept="image/*" label="이미지 파일 선택"
-                        :disable="uploading" clearable />
+                        :disable="uploading" clearable/>
               </div>
               <div class="col-12 col-md-3">
                 <q-btn color="primary" label="업로드" :loading="uploading"
                        :disable="!selectedFile || uploading"
-                       @click="handleUpload" />
+                       @click="handleUpload"/>
               </div>
             </div>
           </q-card-section>
 
-          <q-separator />
+          <q-separator/>
 
           <!-- 전체 사진 리스트 -->
           <q-card-section>
             <div class="row q-col-gutter-md">
               <div v-for="p in pictureUrls" :key="p.id" class="col-12 col-sm-6 col-md-4">
                 <q-card flat bordered class="shadow-1 rounded-borders">
-                  <q-img :src="p.url" :ratio="4/3" basic spinner-color="primary" />
+                  <q-img :src="p.url" :ratio="4/3" basic spinner-color="primary"/>
                   <q-card-section>
                     <div class="text-caption text-grey-7">pictureId: {{ p.id }}</div>
                   </q-card-section>
@@ -505,7 +514,7 @@ onMounted(() => {
         <!-- ▣ REVIEWS TAB -->
         <q-tab-panel name="reviews">
           <q-card-section>
-            <CommentsPanel :restaurant-id="restaurantId" />
+            <CommentsPanel :restaurant-id="restaurantId"/>
           </q-card-section>
         </q-tab-panel>
 
@@ -516,9 +525,9 @@ onMounted(() => {
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useQuasar } from 'quasar'
+import {ref, computed, onMounted} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useQuasar} from 'quasar'
 import {
   getRestaurant,
   uploadRestaurantPicture,
@@ -541,7 +550,7 @@ const restaurantId = computed(() => {
 const restaurant = ref(null)
 const loading = ref(false)
 const menus = computed(() => restaurant.value?.restaurantMenus ?? [])
-const reviews = computed(() => restaurant.value?.restaurantReviews ?? [])
+const reviews = computed(() => restaurant.value?.restaurantComments ?? [])
 
 const selectedFile = ref(null)
 const uploading = ref(false)
@@ -550,8 +559,8 @@ const pictureUrls = ref([])
 
 async function loadDetail() {
   if (!restaurantId.value) {
-    $q.notify({ type: 'negative', message: '유효하지 않은 가게 ID입니다.' })
-    router.replace({ name: 'restaurants' })
+    $q.notify({type: 'negative', message: '유효하지 않은 가게 ID입니다.'})
+    router.replace({name: 'restaurants'})
     return
   }
 
@@ -562,7 +571,7 @@ async function loadDetail() {
     await loadPictureUrls()
   } catch (e) {
     console.error(e)
-    $q.notify({ type: 'negative', message: e.message || '가게 정보를 불러오지 못했습니다.' })
+    $q.notify({type: 'negative', message: e.message || '가게 정보를 불러오지 못했습니다.'})
   } finally {
     loading.value = false
   }
@@ -579,7 +588,7 @@ async function loadPictureUrls() {
       pics.map(async (p) => {
         try {
           const url = await getPictureSignedUrl(p.id)
-          return { id: p.id, url }
+          return {id: p.id, url}
         } catch (e) {
           console.error('signed-url 조회 실패:', e)
           return null
@@ -589,13 +598,13 @@ async function loadPictureUrls() {
     pictureUrls.value = results.filter(Boolean)
   } catch (e) {
     console.error(e)
-    $q.notify({ type: 'negative', message: '사진 정보를 불러오지 못했습니다.' })
+    $q.notify({type: 'negative', message: '사진 정보를 불러오지 못했습니다.'})
   }
 }
 
 async function handleUpload() {
   if (!selectedFile.value || !restaurantId.value) {
-    $q.notify({ type: 'warning', message: '업로드할 파일을 선택하세요.' })
+    $q.notify({type: 'warning', message: '업로드할 파일을 선택하세요.'})
     return
   }
 
@@ -603,20 +612,20 @@ async function handleUpload() {
   const file = Array.isArray(raw) ? raw[0] : raw
 
   if (!(file instanceof File)) {
-    $q.notify({ type: 'negative', message: '선택된 파일을 읽을 수 없습니다.' })
+    $q.notify({type: 'negative', message: '선택된 파일을 읽을 수 없습니다.'})
     return
   }
 
   uploading.value = true
   try {
     await uploadRestaurantPicture(restaurantId.value, file)
-    $q.notify({ type: 'positive', message: '사진이 업로드되었습니다.' })
+    $q.notify({type: 'positive', message: '사진이 업로드되었습니다.'})
 
     selectedFile.value = null
     await loadDetail()
   } catch (e) {
     console.error(e)
-    $q.notify({ type: 'negative', message: e.message || '사진 업로드에 실패했습니다.' })
+    $q.notify({type: 'negative', message: e.message || '사진 업로드에 실패했습니다.'})
   } finally {
     uploading.value = false
   }

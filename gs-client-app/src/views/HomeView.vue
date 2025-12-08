@@ -102,7 +102,7 @@
         <div class="text-subtitle2 text-weight-bold q-mb-sm">데이터 출처</div>
         <div class="text-body2 text-grey-6">
           모범음식점, 위생 등급 등 공공 데이터를 기반으로 하며 실제 정보와 차이가 있을 수 있습니다.
-          잘못된 정보가 보이면 관리자에게 알려 주세요.
+          잘못된 정보가 보이면 관리자에게 알려주세요.
         </div>
       </q-card-section>
     </q-card>
