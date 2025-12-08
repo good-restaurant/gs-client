@@ -1,7 +1,8 @@
+<!--
 <template>
   <q-page class="q-pa-md bg-white">
     <q-card>
-      <!-- 헤더 + 뒤로가기 -->
+      &lt;!&ndash; 헤더 + 뒤로가기 &ndash;&gt;
       <q-card-section class="row items-center q-gutter-sm">
         <q-btn flat round icon="arrow_back" @click="goBack" />
         <div class="text-h6">
@@ -20,12 +21,12 @@
 
       <q-separator />
 
-      <!-- 로딩 오버레이 -->
+      &lt;!&ndash; 로딩 오버레이 &ndash;&gt;
       <q-inner-loading :showing="loading">
         <q-spinner size="40px" />
       </q-inner-loading>
 
-      <!-- 기본 정보 -->
+      &lt;!&ndash; 기본 정보 &ndash;&gt;
       <q-card-section v-if="restaurant">
         <div class="q-mb-sm">
           <div class="text-subtitle1 text-weight-medium">주소</div>
@@ -52,7 +53,7 @@
 
       <q-separator />
 
-      <!-- 사진 업로드 -->
+      &lt;!&ndash; 사진 업로드 &ndash;&gt;
       <q-card-section v-if="restaurant">
         <div class="row items-center q-col-gutter-sm">
           <div class="text-subtitle1 text-weight-medium col-12 col-md-3">
@@ -83,7 +84,7 @@
 
       <q-separator />
 
-      <!-- 사진 리스트 -->
+      &lt;!&ndash; 사진 리스트 &ndash;&gt;
       <q-card-section v-if="restaurant">
         <div class="row items-center q-mb-sm">
           <div class="text-subtitle1 text-weight-medium">
@@ -123,7 +124,7 @@
 
       <q-separator />
 
-      <!-- 댓글 패널 (관리자용 수정/삭제 가능) -->
+      &lt;!&ndash; 댓글 패널 (관리자용 수정/삭제 가능) &ndash;&gt;
       <q-card-section v-if="restaurant">
         <CommentsPanel :restaurant-id="restaurantId" admin />
       </q-card-section>
@@ -280,3 +281,278 @@ onMounted(() => {
   loadDetail()
 })
 </script>
+-->
+
+<template>
+  <q-page class="q-pa-md bg-grey-1">
+    <q-card class="q-pa-sm shadow-3" style="border-radius: 16px;">
+
+      <!-- HEADER -->
+      <q-card-section class="row items-center q-gutter-sm">
+        <q-btn flat round icon="arrow_back" @click="goBack" />
+        <div class="text-h6 text-weight-bold">
+          [관리자] {{ restaurant?.restaurantName || '가게 상세 정보' }}
+        </div>
+        <q-space />
+        <q-chip
+          v-if="restaurant?.category"
+          outline
+          color="primary"
+          text-color="primary"
+        >
+          {{ CATEGORY_LABEL_MAP[restaurant.category] || restaurant.category }}
+        </q-chip>
+      </q-card-section>
+
+      <q-separator />
+
+      <!-- LOADING -->
+      <q-inner-loading :showing="loading">
+        <q-spinner size="40px" />
+      </q-inner-loading>
+
+      <!-- TABS -->
+      <q-tabs
+        v-model="currentTab"
+        dense
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+        class="q-mt-sm"
+      >
+        <q-tab name="home" label="기본 정보" />
+        <q-tab name="photos" :label="`사진 (${pictureUrls.length})`" />
+        <q-tab name="reviews" :label="`리뷰 (${reviews.length})`" />
+      </q-tabs>
+
+      <q-separator />
+
+      <!-- TAB PANELS -->
+      <q-tab-panels v-model="currentTab" animated>
+
+        <!-- ▣ HOME TAB -->
+        <q-tab-panel name="home">
+          <q-card-section v-if="restaurant">
+            <div class="q-mb-sm">
+              <div class="text-subtitle1 text-weight-bold">주소</div>
+              <div class="text-body2 text-grey-8">
+                {{ restaurant.address || '-' }}
+              </div>
+            </div>
+
+            <div class="row q-col-gutter-md q-mt-sm">
+              <div class="col-12 col-md-4">
+                <div class="label">위도(lat)</div>
+                <div class="value">{{ restaurant.lat ?? '-' }}</div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="label">경도(lon)</div>
+                <div class="value">{{ restaurant.lon ?? '-' }}</div>
+              </div>
+              <div class="col-12 col-md-4">
+                <div class="label">전화번호</div>
+                <div class="value">{{ restaurant.phoneNumber || '-' }}</div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-tab-panel>
+
+        <!-- ▣ PHOTOS TAB -->
+        <q-tab-panel name="photos">
+          <!-- 사진 업로드 -->
+          <q-card-section>
+            <div class="row items-center q-col-gutter-sm">
+              <div class="text-subtitle1 text-weight-medium col-12 col-md-3">
+                사진 업로드
+              </div>
+              <div class="col-12 col-md-6">
+                <q-file
+                  v-model="selectedFile"
+                  dense outlined
+                  accept="image/*"
+                  label="이미지 파일 선택"
+                  :disable="uploading"
+                  clearable
+                />
+              </div>
+              <div class="col-12 col-md-3">
+                <q-btn
+                  color="primary"
+                  label="업로드"
+                  :loading="uploading"
+                  :disable="!selectedFile || uploading"
+                  @click="handleUpload"
+                />
+              </div>
+            </div>
+          </q-card-section>
+
+          <q-separator />
+
+          <!-- 사진 리스트 -->
+          <q-card-section>
+            <div class="row q-col-gutter-md">
+              <div
+                v-for="p in pictureUrls"
+                :key="p.id"
+                class="col-12 col-sm-6 col-md-4"
+              >
+                <q-card flat bordered class="shadow-1 rounded-borders">
+                  <q-img
+                    :src="p.url"
+                    :ratio="4/3"
+                    basic
+                    spinner-color="primary"
+                  />
+                  <q-card-section class="q-pa-sm">
+                    <div class="text-caption text-grey-7">
+                      pictureId: {{ p.id }}
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+
+            <div v-if="pictureUrls.length === 0" class="text-grey q-mt-sm">
+              사진이 없습니다.
+            </div>
+          </q-card-section>
+        </q-tab-panel>
+
+        <!-- ▣ REVIEWS TAB -->
+        <q-tab-panel name="reviews">
+          <q-card-section>
+            <CommentsPanel :restaurant-id="restaurantId" admin />
+          </q-card-section>
+        </q-tab-panel>
+
+      </q-tab-panels>
+    </q-card>
+  </q-page>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+
+import { getRestaurant } from '@/api/authRestaurantApi'
+import { uploadRestaurantPicture, getPictureSignedUrl } from '@/api/restaurantApi'
+import CommentsPanel from '@/components/CommentsPanel.vue'
+
+const CATEGORY_LABEL_MAP = {
+  ETC: '기타',
+  KOREAN: '한식',
+  CHINESE: '중식',
+  JAPANESE: '일식',
+  WESTERN: '양식'
+}
+
+const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
+
+const currentTab = ref('home')
+
+const restaurantId = computed(() => Number(route.params.id))
+
+const restaurant = ref(null)
+const loading = ref(false)
+
+const selectedFile = ref(null)
+const uploading = ref(false)
+
+const pictureUrls = ref([])
+
+const menus = computed(() => restaurant.value?.restaurantMenus ?? [])
+const reviews = computed(() => restaurant.value?.restaurantComments ?? [])
+
+/* ▣ 데이터 로드 */
+async function loadDetail() {
+  loading.value = true
+  try {
+    const data = await getRestaurant(restaurantId.value)
+    restaurant.value = data
+    await loadPictureUrls()
+  } catch (e) {
+    console.error(e)
+    $q.notify({ type: 'negative', message: '가게 정보를 불러오지 못했습니다.' })
+  } finally {
+    loading.value = false
+  }
+}
+
+async function loadPictureUrls() {
+  pictureUrls.value = []
+
+  const pics = restaurant.value?.restaurantPictures
+  if (!pics?.length) return
+
+  const results = await Promise.all(
+    pics.map(async p => {
+      try {
+        const url = await getPictureSignedUrl(p.id)
+        return { id: p.id, url }
+      } catch (e) {
+        console.error('signed-url 조회 실패:', e)
+        return null
+      }
+    })
+  )
+  pictureUrls.value = results.filter(Boolean)
+}
+
+/* ▣ 사진 업로드 */
+async function handleUpload() {
+  const file = Array.isArray(selectedFile.value)
+    ? selectedFile.value[0]
+    : selectedFile.value
+
+  if (!file) {
+    $q.notify({ type: 'warning', message: '업로드할 파일을 선택하세요.' })
+    return
+  }
+
+  uploading.value = true
+  try {
+    await uploadRestaurantPicture(restaurantId.value, file)
+    $q.notify({ type: 'positive', message: '사진이 업로드되었습니다.' })
+    selectedFile.value = null
+    await loadDetail()
+  } catch (e) {
+    console.error(e)
+    $q.notify({ type: 'negative', message: '업로드 실패' })
+  } finally {
+    uploading.value = false
+  }
+}
+
+function goBack() {
+  router.back()
+}
+
+onMounted(() => {
+  loadDetail()
+})
+</script>
+
+<style scoped>
+.rounded-borders {
+  border-radius: 12px;
+}
+
+.hover-light:hover {
+  background: #f5faff;
+  transition: 0.2s;
+}
+
+.label {
+  font-size: 13px;
+  color: #666;
+}
+.value {
+  font-size: 14px;
+  font-weight: 600;
+}
+</style>
+
