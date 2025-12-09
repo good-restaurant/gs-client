@@ -1,6 +1,7 @@
 // src/api/authRestaurantApi.ts
 import api from './axiosClient'
 import type {
+  MenuDto,
   RestaurantDetailDto,
   RestaurantDto
 } from './types/restaurant.d'
@@ -53,5 +54,32 @@ export async function updateRestaurantPicture(pictureId: number, payload: any) {
 
 export async function deleteRestaurantPicture(pictureId: number) {
   const res = await api.delete(`/v1/restaurant-admin/picture/${pictureId}`)
+  return res.data
+}
+
+// 메뉴 관리 API
+export async function listMenus(restaurantId?: number): Promise<MenuDto[]> {
+  const params = restaurantId ? { restaurantId } : {}
+  const res = await api.get('/v1/restaurant-menu/view', { params })
+  return res.data
+}
+
+export async function getMenu(id: number): Promise<MenuDto> {
+  const res = await api.get(`/v1/restaurant-menu/view/${id}`)
+  return res.data
+}
+
+export async function createMenu(payload: MenuDto) {
+  const res = await api.post('/v1/restaurant-menu', payload)
+  return res.data
+}
+
+export async function updateMenu(id: number, payload: MenuDto) {
+  const res = await api.put(`/v1/restaurant-menu/${id}`, payload)
+  return res.data
+}
+
+export async function deleteMenu(id: number) {
+  const res = await api.delete(`/v1/restaurant-menu/${id}`)
   return res.data
 }

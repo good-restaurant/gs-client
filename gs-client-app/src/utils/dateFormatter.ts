@@ -1,21 +1,21 @@
 /**
  * 날짜 포맷팅 유틸리티
- * 
+ *
  * Java LocalDateTime 배열 형식 [year, month, day, hour, minute, second, nanoseconds]
  * 및 ISO 문자열 형식을 지원합니다.
  */
 
 /**
  * 날짜 값을 포맷팅된 문자열로 변환
- * 
+ *
  * @param dateValue - 날짜 값 (배열, ISO 문자열, Date 객체)
  * @param locale - 로케일 (기본값: 'ko-KR')
  * @returns 포맷팅된 날짜 문자열
- * 
+ *
  * @example
  * formatDate([2025, 12, 5, 6, 38, 52, 696008000])
  * // => "2025. 12. 5. 오전 6:38:52"
- * 
+ *
  * formatDate('2025-12-05T06:38:52')
  * // => "2025. 12. 5. 오전 6:38:52"
  */
@@ -54,7 +54,7 @@ export function formatDate(dateValue: any, locale: string = 'ko-KR'): string {
 
 /**
  * 날짜를 상대 시간으로 표시 (예: "3분 전", "2시간 전")
- * 
+ *
  * @param dateValue - 날짜 값
  * @returns 상대 시간 문자열
  */

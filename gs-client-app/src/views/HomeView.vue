@@ -106,13 +106,12 @@
         </div>
       </q-card-section>
     </q-card>
-
   </q-page>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
-import RecentCommentsPanel from '@/components/RecentCommentsPanel.vue'
+import RecentCommentsPanel from '@/components/RecentCommentsPanel.vue';
+import { useRouter } from 'vue-router';
 
 const router = useRouter()
 const goToRestaurants = () => router.push('/restaurants')
