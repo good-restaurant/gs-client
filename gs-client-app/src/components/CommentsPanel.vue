@@ -78,6 +78,7 @@ import {
     getRestaurantComments,
     updateComment
 } from '@/api/restaurantCommentApi';
+import { formatDate } from '@/utils/dateFormatter';
 import { useQuasar } from 'quasar';
 import { computed, reactive, ref, watchEffect } from 'vue';
 
@@ -124,11 +125,6 @@ function resetForm() {
     form.content = '';
     form.rating = 0;
     form.displayName = '';
-}
-
-function formatDate(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
 }
 
 async function reload() {
