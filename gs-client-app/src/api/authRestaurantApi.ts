@@ -1,8 +1,8 @@
 // src/api/authRestaurantApi.ts
 import api from './axiosClient'
 import type {
-    RestaurantDetailDto,
-    RestaurantDto
+  RestaurantDetailDto,
+  RestaurantDto
 } from './types/restaurant.d'
 
 export async function listRestaurants(page = 0, size = 100): Promise<RestaurantDto[]> {
@@ -31,19 +31,27 @@ export async function createRestaurant(payload: RestaurantDto) {
   return res.data
 }
 
-export async function updateRestaurant(payload: RestaurantDto) {
-  const res = await api.patch('/v1/restaurant-admin', payload)
+export async function updateRestaurant(id: number, payload: RestaurantDto) {
+  const res = await api.put(`/v1/restaurant-admin/${id}`, payload)
   return res.data
 }
 
-export async function deleteRestaurant(restaurantId: number) {
-  const res = await api.delete('/v1/restaurant-admin', {
-    params: { restaurantId },
-  })
+export async function deleteRestaurant(id: number) {
+  const res = await api.delete(`/v1/restaurant-admin/${id}`)
   return res.data
 }
 
 export async function getRestaurant(id: number): Promise<RestaurantDetailDto> {
   const res = await api.get(`/v1/restaurant-admin/view/${id}`)
+  return res.data
+}
+
+export async function updateRestaurantPicture(pictureId: number, payload: any) {
+  const res = await api.put(`/v1/restaurant-admin/picture/${pictureId}`, payload)
+  return res.data
+}
+
+export async function deleteRestaurantPicture(pictureId: number) {
+  const res = await api.delete(`/v1/restaurant-admin/picture/${pictureId}`)
   return res.data
 }
