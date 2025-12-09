@@ -59,6 +59,54 @@
               </div>
             </div>
 
+            <!--범례 토글 버튼-->
+            <q-btn
+              :color="legendVisible ? 'primary' : 'grey'"
+              :icon="legendVisible ? 'info' : 'info_outline'"
+              label="범례"
+              dense
+              rounded
+              class="absolute-top-right q-ma-md"
+              style="z-index: 1000; top: 60px; right: 10px;"
+              @click="toggleLegend"
+            />
+
+            <!--범례 패널-->
+            <q-card
+              v-if="legendVisible"
+              class="absolute-top-right q-ma-md"
+              style="z-index: 1001; top: 110px; right: 10px; max-width: 350px; max-height: calc(70vh - 120px); overflow-y: auto;"
+              flat
+              bordered
+            >
+              <q-card-section class="q-pa-sm">
+                <div class="row items-center justify-between">
+                  <div class="text-h6 q-mb-xs">토지이용 색상 범례</div>
+                  <q-btn
+                    icon="close"
+                    flat
+                    dense
+                    round
+                    size="sm"
+                    @click="legendVisible = false"
+                  />
+                </div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="q-pa-sm">
+                <div class="q-gutter-y-xs">
+                  <template v-for="item in legendItems" :key="item.quantity">
+                    <div class="row items-center q-gutter-sm" style="min-height: 28px;">
+                      <div
+                        :style="`width: 24px; height: 24px; background-color: ${item.color}; border: 1px solid #ccc; flex-shrink: 0;`"
+                      ></div>
+                      <div class="col text-body2">{{ item.label }}</div>
+                    </div>
+                  </template>
+                </div>
+              </q-card-section>
+            </q-card>
+
             <!--로딩 스피너-->
             <q-inner-loading :showing="loading">
               <q-spinner size="42px" />
@@ -84,6 +132,7 @@ const loading = ref(true)
 const wmsLayerVisible = ref(true) // WMS 레이어 표시 여부
 const wmsLegendVisible = ref(true) // 범례 박스 표시 여부
 const wmsLegendImageUrl = '/wms-legend.png'
+const legendVisible = ref(false) // 범례 표시 여부
 
 // 검색 폼 상태
 const address = ref('')
@@ -105,6 +154,46 @@ const limitOptions = [
   { label: '30개', value: 30 },
   { label: '50개', value: 50 },
   { label: '100개', value: 100 }
+]
+
+// 범례 데이터 (RCI 규칙 적용: R=초록, C=파랑, I=노랑, O=보라, 녹지=하늘색)
+// 고밀도일수록 진한 색상
+const legendItems = [
+  // R (Residential/주거) - 초록색 계열
+  // 전용주거지역 (저밀도) - 연한 민트/라임색 계열로 구분
+  { quantity: 100, color: '#B0FFB0', label: '전용주거지역' }, // 연한 민트색 (저밀도)
+  { quantity: 101, color: '#90EE90', label: '1종 전용주거' }, // 밝은 민트색
+  { quantity: 102, color: '#7CCD7C', label: '2종 전용주거' }, // 중간 민트색
+  // 일반주거지역 (중고밀도) - 일반 초록색 계열
+  { quantity: 110, color: '#E0F2E0', label: '일반주거' }, // 연한 초록
+  { quantity: 111, color: '#90EE90', label: '1종 일반주거' }, // 밝은 초록
+  { quantity: 112, color: '#66CC66', label: '2종 일반주거' }, // 중간 초록
+  { quantity: 113, color: '#228B22', label: '3종 일반주거' }, // 진한 초록
+  { quantity: 120, color: '#20B2AA', label: '준주거' }, // 청록색 (주거+상업 혼합, 고밀도)
+  
+  // C (Commercial/상업) - 파랑색 계열
+  { quantity: 200, color: '#000080', label: '중심상업' }, // 가장 진한 파랑
+  { quantity: 201, color: '#0000CD', label: '일반상업' }, // 진한 파랑
+  { quantity: 202, color: '#4169E1', label: '근린상업' }, // 중간 파랑
+  { quantity: 203, color: '#87CEEB', label: '유통상업' }, // 밝은 파랑
+  
+  // I (Industrial/공업) - 노랑색 계열
+  { quantity: 300, color: '#FF8C00', label: '전용공업' }, // 가장 진한 노랑/주황
+  { quantity: 301, color: '#FFA500', label: '일반공업' }, // 진한 노랑
+  { quantity: 302, color: '#FFD700', label: '준공업' }, // 밝은 노랑
+  
+  // 녹지 - 하늘색 계열
+  { quantity: 400, color: '#4682B4', label: '보전녹지' }, // 진한 하늘색
+  { quantity: 401, color: '#5F9EA0', label: '생산녹지' }, // 중간 하늘색
+  { quantity: 402, color: '#87CEEB', label: '자연녹지' }, // 밝은 하늘색
+  
+  // 관리지역 - 회색 계열
+  { quantity: 500, color: '#696969', label: '보전관리' }, // 진한 회색
+  { quantity: 501, color: '#808080', label: '생산관리' }, // 중간 회색
+  { quantity: 502, color: '#A9A9A9', label: '계획관리' }, // 밝은 회색
+  
+  // 개발제한구역 - 특수 색상
+  { quantity: 601, color: '#9370DB', label: '개발제한구역' } // 보라색
 ]
 
 // 지도/마커 상태
@@ -379,14 +468,19 @@ function toggleWMSLayer() {
       // 오버레이가 없으면 업데이트 함수 호출
       updateWMSOverlay()
     }
-    $q.notify({ type: 'positive', message: 'WMS 레이어가 표시됩니다.' })
+    $q.notify({ type: 'positive', message: '지적편집도 레이어가 표시됩니다.' })
   } else {
     // 레이어 숨김
     if (wmsOverlay) {
       wmsOverlay.setMap(null)
     }
-    $q.notify({ type: 'info', message: 'WMS 레이어가 숨겨집니다.' })
+    $q.notify({ type: 'info', message: '지적편집도 레이어가 숨겨집니다.' })
   }
+}
+
+// 범례 토글 함수
+function toggleLegend() {
+  legendVisible.value = !legendVisible.value
 }
 
 // 기존 마커 제거
