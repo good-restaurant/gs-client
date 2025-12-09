@@ -19,3 +19,12 @@
         displayName?: string
     }
     
+    export interface MenuDto {
+        id?: number
+        name: string
+        description?: string | null
+        price?: number
+        pictureUuid?: string | null
+        restaurantId?: number  // API 호출 시에만 사용
+    }
+    

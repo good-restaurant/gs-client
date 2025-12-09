@@ -69,14 +69,18 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watchEffect } from 'vue';
-import { useQuasar } from 'quasar';
+import {
+    adminDeleteComment,
+    adminUpdateComment,
+} from '@/api/authRestaurantCommentApi';
 import {
     createComment,
-    updateComment,
-    deleteComment,
     getRestaurantComments,
-} from '@/api/restaurantApi';
+    updateComment
+} from '@/api/restaurantCommentApi';
+import { formatDate } from '@/utils/dateFormatter';
+import { useQuasar } from 'quasar';
+import { computed, reactive, ref, watchEffect } from 'vue';
 
 const props = defineProps({
     restaurantId: { type: [Number, String], required: true },
@@ -123,11 +127,6 @@ function resetForm() {
     form.displayName = '';
 }
 
-function formatDate(iso) {
-    if (!iso) return '';
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
-}
-
 async function reload() {
     loading.value = true;
     try {
@@ -166,11 +165,20 @@ async function onSubmit() {
     submitting.value = true;
     try {
         if (editId.value) {
-            await updateComment(editId.value, {
-                content: form.content.trim(),
-                rating: form.rating || 0,
-                displayName: form.displayName?.trim() || undefined,
-            });
+            // Admin 모드일 때는 admin API 사용
+            if (props.admin) {
+                await adminUpdateComment(editId.value, {
+                    content: form.content.trim(),
+                    rating: form.rating || 0,
+                    displayName: form.displayName?.trim() || undefined,
+                });
+            } else {
+                await updateComment(editId.value, {
+                    content: form.content.trim(),
+                    rating: form.rating || 0,
+                    displayName: form.displayName?.trim() || undefined,
+                });
+            }
             $q.notify({ type: 'positive', message: '댓글이 수정되었습니다.' });
         } else {
             if (props.admin) {
@@ -207,7 +215,8 @@ async function remove(id) {
     if (!props.admin) return;
     deletingId.value = id;
     try {
-        await deleteComment(id);
+        // Admin 모드일 때는 admin API 사용
+        await adminDeleteComment(id);
         $q.notify({ type: 'positive', message: '삭제되었습니다.' });
         if (comments.value.length === 1 && page.value > 1) {
             page.value = page.value - 1;
