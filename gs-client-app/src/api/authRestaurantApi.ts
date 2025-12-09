@@ -69,8 +69,8 @@ export async function getMenu(id: number): Promise<MenuDto> {
   return res.data
 }
 
-export async function createMenu(payload: MenuDto) {
-  const res = await api.post('/v1/restaurant-menu', payload)
+export async function createMenu(payload: MenuDto, id: number) {
+  const res = await api.post(`/v1/restaurant-menu/${id}`, payload)
   return res.data
 }
 

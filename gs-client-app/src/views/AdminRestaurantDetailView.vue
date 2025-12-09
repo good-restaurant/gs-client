@@ -777,7 +777,7 @@ async function saveMenu() {
       $q.notify({ type: 'positive', message: '메뉴가 수정되었습니다.' })
     } else {
       // 추가
-      await createMenu(payload)
+      await createMenu(payload, restaurantId.value)
       $q.notify({ type: 'positive', message: '메뉴가 추가되었습니다.' })
     }
 
