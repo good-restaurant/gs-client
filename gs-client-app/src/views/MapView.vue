@@ -39,16 +39,25 @@
             <div id="map" style="width: 100%; height: 100%;"></div>
 
             <!--WMS 레이어 토글 버튼-->
-            <q-btn
-              :color="wmsLayerVisible ? 'primary' : 'grey'"
-              :icon="wmsLayerVisible ? 'layers' : 'layers_off'"
-              :label="wmsLayerVisible ? '지적편집도 표시' : '지적편집도 숨기기'"
-              dense
-              rounded
-              class="absolute-top-right q-ma-md"
-              style="z-index: 1000;"
-              @click="toggleWMSLayer"
-            />
+            <q-btn :color="wmsLayerVisible ? 'primary' : 'grey'" :icon="wmsLayerVisible ? 'layers' : 'layers_off'"
+              :label="wmsLayerVisible ? '지적편집도 표시' : '지적편집도 숨기기'" dense rounded class="absolute-top-right q-ma-md"
+              style="z-index: 1000;" @click="toggleWMSLayer" />
+
+            <!-- 지적편집도 범례 박스 (이미지 표시) -->
+            <div v-if="wmsLayerVisible && wmsLegendVisible" class="wms-legend-box bg-white q-pa-sm shadow-2">
+              <!-- 상단 제목 + 닫기(X) 버튼 -->
+              <div class="row items-center justify-between q-mb-xs">
+                <div class="text-caption text-weight-bold">
+                  지적편집도 범례
+                </div>
+                <q-btn flat round dense icon="close" size="sm" @click="wmsLegendVisible = false" />
+              </div>
+
+              <!-- 범례 이미지 영역 -->
+              <div class="legend-body">
+                <img :src="wmsLegendImageUrl" alt="지적편집도 범례" class="wms-legend-image">
+              </div>
+            </div>
 
             <!--로딩 스피너-->
             <q-inner-loading :showing="loading">
@@ -73,6 +82,8 @@ const $q = useQuasar()
 const clientId = ref('')
 const loading = ref(true)
 const wmsLayerVisible = ref(true) // WMS 레이어 표시 여부
+const wmsLegendVisible = ref(true) // 범례 박스 표시 여부
+const wmsLegendImageUrl = '/wms-legend.png'
 
 // 검색 폼 상태
 const address = ref('')
@@ -204,10 +215,10 @@ function initMap() {
   // 지도 이벤트 리스너 추가
   map.addListener('bounds_changed', updateWMSOverlay)
   map.addListener('zoom_changed', updateWMSOverlay)
-  
+
   // 초기 WMS 오버레이 생성
   setTimeout(updateWMSOverlay, 500)
-  
+
   console.log('GeoServer WMS 오버레이가 추가되었습니다.')
 }
 
@@ -217,149 +228,151 @@ function updateWMSOverlay() {
   if (!map || !wmsLayerVisible.value) {
     return
   }
-  
+
   try {
     const bounds = map.getBounds()
-      const sw = bounds.getSW() // 남서쪽 (min)
-      const ne = bounds.getNE() // 북동쪽 (max)
-      
-      // 네이버 지도 bounds (EPSG:4326) - 네이버 지도는 EPSG:4326 사용
-      const swLat = sw.lat()
-      const swLng = sw.lng()
-      const neLat = ne.lat()
-      const neLng = ne.lng()
-      
-      // GeoServer가 자동으로 좌표계를 변환하도록 EPSG:4326으로 요청
-      // bbox는 minX, minY, maxX, maxY 순서 (WMS 표준)
-      // EPSG:4326에서는 lng, lat 순서로 minLng, minLat, maxLng, maxLat
-      const bbox = [swLng, swLat, neLng, neLat].join(',')
-      const mapSize = map.getSize()
-      const width = mapSize.width || 800
-      const height = mapSize.height || 600
-      
-      // GeoServer가 정상 응답하는 형식으로 URL 생성
-      // GeoServer가 EPSG:4326으로 자동 변환해주므로 SRS=EPSG:4326 사용
-      const url = `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
-        + `&FORMAT=image%2Fpng`  // 투명도 지원을 위해 png 사용
-        + `&TRANSPARENT=true`
-        + `&STYLES`  // 값 없이 파라미터만
-        + `&LAYERS=${encodeURIComponent(wmsLayer)}`
-        + `&EXCEPTIONS=application%2Fvnd.ogc.se_inimage`
-        + `&SRS=EPSG%3A4326`  // 네이버 지도와 동일한 좌표계 사용
-        + `&WIDTH=${width}&HEIGHT=${height}`
-        + `&BBOX=${encodeURIComponent(bbox)}`
-      
-        // 레이어 테스트용 콘솔 로그
+    const sw = bounds.getSW() // 남서쪽 (min)
+    const ne = bounds.getNE() // 북동쪽 (max)
+
+    // 네이버 지도 bounds (EPSG:4326) - 네이버 지도는 EPSG:4326 사용
+    const swLat = sw.lat()
+    const swLng = sw.lng()
+    const neLat = ne.lat()
+    const neLng = ne.lng()
+
+    // GeoServer가 자동으로 좌표계를 변환하도록 EPSG:4326으로 요청
+    // bbox는 minX, minY, maxX, maxY 순서 (WMS 표준)
+    // EPSG:4326에서는 lng, lat 순서로 minLng, minLat, maxLng, maxLat
+    const bbox = [swLng, swLat, neLng, neLat].join(',')
+    const mapSize = map.getSize()
+    const width = mapSize.width || 800
+    const height = mapSize.height || 600
+
+    // GeoServer가 정상 응답하는 형식으로 URL 생성
+    // GeoServer가 EPSG:4326으로 자동 변환해주므로 SRS=EPSG:4326 사용
+    const url = `${wmsUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap`
+      + `&FORMAT=image%2Fpng`  // 투명도 지원을 위해 png 사용
+      + `&TRANSPARENT=true`
+      + `&STYLES`  // 값 없이 파라미터만
+      + `&LAYERS=${encodeURIComponent(wmsLayer)}`
+      + `&EXCEPTIONS=application%2Fvnd.ogc.se_inimage`
+      + `&SRS=EPSG%3A4326`  // 네이버 지도와 동일한 좌표계 사용
+      + `&WIDTH=${width}&HEIGHT=${height}`
+      + `&BBOX=${encodeURIComponent(bbox)}`
+
+    // 레이어 테스트용 콘솔 로그
     //   console.log('WMS URL 업데이트:', url)
     //   console.log('네이버 지도 Bounds (EPSG:4326):', { 
-        // sw: `${swLat},${swLng}`, 
-        // ne: `${neLat},${neLng}` 
-      // })
-      // console.log('WMS BBOX (EPSG:4326):', bbox)
-      
-      // 기존 오버레이 제거
-      if (wmsOverlay) {
-        wmsOverlay.setMap(null)
-      }
-      
-      // 새로운 오버레이 생성
-      const overlayImage = document.createElement('img')
-      overlayImage.src = url
-      overlayImage.style.opacity = '0.6'
-      overlayImage.style.pointerEvents = 'none'
-      overlayImage.onerror = (e) => {
-        console.error('WMS 이미지 로드 실패:', url, e)
-      }
-      overlayImage.onload = () => {
-        console.log('WMS 이미지 로드 성공')
-      }
-      
-      // 네이버 지도 bounds를 클로저로 저장 (이미지 배치용)
-      // WMS 이미지는 네이버 지도의 bounds에 정확히 맞춰서 배치
-      const boundsForOverlay = { 
-        sw: new globalThis.naver.maps.LatLng(swLat, swLng),
-        ne: new globalThis.naver.maps.LatLng(neLat, neLng)
-      }
-      
-      wmsOverlay = new globalThis.naver.maps.OverlayView()
-      wmsOverlay.onAdd = function() {
-        const panes = this.getPanes()
-        panes.overlayLayer.appendChild(overlayImage)
-      }
-      wmsOverlay.draw = function() {
-        try {
-          const projection = this.getProjection()
-          const mapSize = map.getSize()
-          
-          // 네이버 지도 API에서 좌표를 픽셀로 변환
-          // 네이버 지도는 fromCoordToOffset 메서드를 사용
-          // LatLng를 Point로 변환 후 사용
-          const swCoord = new globalThis.naver.maps.Point(
-            boundsForOverlay.sw.lng(),
-            boundsForOverlay.sw.lat()
-          )
-          const neCoord = new globalThis.naver.maps.Point(
-            boundsForOverlay.ne.lng(),
-            boundsForOverlay.ne.lat()
-          )
-          
-          // projection이 존재하고 메서드가 있는지 확인
-          if (projection && typeof projection.fromCoordToOffset === 'function') {
-            const swOffset = projection.fromCoordToOffset(swCoord)
-            const neOffset = projection.fromCoordToOffset(neCoord)
-            
-            // 이미지 위치와 크기 설정
-            overlayImage.style.position = 'absolute'
-            overlayImage.style.left = swOffset.x + 'px'
-            overlayImage.style.top = neOffset.y + 'px'
-            overlayImage.style.width = Math.abs(neOffset.x - swOffset.x) + 'px'
-            overlayImage.style.height = Math.abs(swOffset.y - neOffset.y) + 'px'
-          } else {
-            // 대체 방법: 지도 bounds를 기준으로 직접 계산
-            const mapBounds = map.getBounds()
-            const swBounds = mapBounds.getSW()
-            const neBounds = mapBounds.getNE()
-            
-            const lngRatio = (boundsForOverlay.sw.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
-            const latRatioSW = (neBounds.lat() - boundsForOverlay.sw.lat()) / (neBounds.lat() - swBounds.lat())
-            const lngRatioNE = (boundsForOverlay.ne.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
-            const latRatioNE = (neBounds.lat() - boundsForOverlay.ne.lat()) / (neBounds.lat() - swBounds.lat())
-            
-            overlayImage.style.position = 'absolute'
-            overlayImage.style.left = (lngRatio * mapSize.width) + 'px'
-            overlayImage.style.top = (latRatioSW * mapSize.height) + 'px'
-            overlayImage.style.width = ((lngRatioNE - lngRatio) * mapSize.width) + 'px'
-            overlayImage.style.height = ((latRatioSW - latRatioNE) * mapSize.height) + 'px'
-          }
-        } catch (error) {
-          console.error('오버레이 draw 오류:', error)
-          // 오류 발생 시 전체 지도 크기로 설정
-          const mapSize = map.getSize()
-          overlayImage.style.position = 'absolute'
-          overlayImage.style.left = '0px'
-          overlayImage.style.top = '0px'
-          overlayImage.style.width = mapSize.width + 'px'
-          overlayImage.style.height = mapSize.height + 'px'
-        }
-      }
-      wmsOverlay.onRemove = function() {
-        if (overlayImage && overlayImage.parentNode) {
-          overlayImage.remove()
-        }
-      }
-      
-      wmsOverlay.setMap(map)
-    } catch (error) {
-      console.error('WMS 오버레이 업데이트 오류:', error)
+    // sw: `${swLat},${swLng}`, 
+    // ne: `${neLat},${neLng}` 
+    // })
+    // console.log('WMS BBOX (EPSG:4326):', bbox)
+
+    // 기존 오버레이 제거
+    if (wmsOverlay) {
+      wmsOverlay.setMap(null)
     }
+
+    // 새로운 오버레이 생성
+    const overlayImage = document.createElement('img')
+    overlayImage.src = url
+    overlayImage.style.opacity = '0.6'
+    overlayImage.style.pointerEvents = 'none'
+    overlayImage.onerror = (e) => {
+      console.error('WMS 이미지 로드 실패:', url, e)
+    }
+    overlayImage.onload = () => {
+      console.log('WMS 이미지 로드 성공')
+    }
+
+    // 네이버 지도 bounds를 클로저로 저장 (이미지 배치용)
+    // WMS 이미지는 네이버 지도의 bounds에 정확히 맞춰서 배치
+    const boundsForOverlay = {
+      sw: new globalThis.naver.maps.LatLng(swLat, swLng),
+      ne: new globalThis.naver.maps.LatLng(neLat, neLng)
+    }
+
+    wmsOverlay = new globalThis.naver.maps.OverlayView()
+    wmsOverlay.onAdd = function () {
+      const panes = this.getPanes()
+      panes.overlayLayer.appendChild(overlayImage)
+    }
+    wmsOverlay.draw = function () {
+      try {
+        const projection = this.getProjection()
+        const mapSize = map.getSize()
+
+        // 네이버 지도 API에서 좌표를 픽셀로 변환
+        // 네이버 지도는 fromCoordToOffset 메서드를 사용
+        // LatLng를 Point로 변환 후 사용
+        const swCoord = new globalThis.naver.maps.Point(
+          boundsForOverlay.sw.lng(),
+          boundsForOverlay.sw.lat()
+        )
+        const neCoord = new globalThis.naver.maps.Point(
+          boundsForOverlay.ne.lng(),
+          boundsForOverlay.ne.lat()
+        )
+
+        // projection이 존재하고 메서드가 있는지 확인
+        if (projection && typeof projection.fromCoordToOffset === 'function') {
+          const swOffset = projection.fromCoordToOffset(swCoord)
+          const neOffset = projection.fromCoordToOffset(neCoord)
+
+          // 이미지 위치와 크기 설정
+          overlayImage.style.position = 'absolute'
+          overlayImage.style.left = swOffset.x + 'px'
+          overlayImage.style.top = neOffset.y + 'px'
+          overlayImage.style.width = Math.abs(neOffset.x - swOffset.x) + 'px'
+          overlayImage.style.height = Math.abs(swOffset.y - neOffset.y) + 'px'
+        } else {
+          // 대체 방법: 지도 bounds를 기준으로 직접 계산
+          const mapBounds = map.getBounds()
+          const swBounds = mapBounds.getSW()
+          const neBounds = mapBounds.getNE()
+
+          const lngRatio = (boundsForOverlay.sw.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
+          const latRatioSW = (neBounds.lat() - boundsForOverlay.sw.lat()) / (neBounds.lat() - swBounds.lat())
+          const lngRatioNE = (boundsForOverlay.ne.lng() - swBounds.lng()) / (neBounds.lng() - swBounds.lng())
+          const latRatioNE = (neBounds.lat() - boundsForOverlay.ne.lat()) / (neBounds.lat() - swBounds.lat())
+
+          overlayImage.style.position = 'absolute'
+          overlayImage.style.left = (lngRatio * mapSize.width) + 'px'
+          overlayImage.style.top = (latRatioSW * mapSize.height) + 'px'
+          overlayImage.style.width = ((lngRatioNE - lngRatio) * mapSize.width) + 'px'
+          overlayImage.style.height = ((latRatioSW - latRatioNE) * mapSize.height) + 'px'
+        }
+      } catch (error) {
+        console.error('오버레이 draw 오류:', error)
+        // 오류 발생 시 전체 지도 크기로 설정
+        const mapSize = map.getSize()
+        overlayImage.style.position = 'absolute'
+        overlayImage.style.left = '0px'
+        overlayImage.style.top = '0px'
+        overlayImage.style.width = mapSize.width + 'px'
+        overlayImage.style.height = mapSize.height + 'px'
+      }
+    }
+    wmsOverlay.onRemove = function () {
+      if (overlayImage && overlayImage.parentNode) {
+        overlayImage.remove()
+      }
+    }
+
+    wmsOverlay.setMap(map)
+  } catch (error) {
+    console.error('WMS 오버레이 업데이트 오류:', error)
   }
+}
 
 // WMS 레이어 토글 함수
 function toggleWMSLayer() {
   wmsLayerVisible.value = !wmsLayerVisible.value
-  
+
   if (wmsLayerVisible.value) {
-    // 레이어 표시
+    // 레이어 표시 + 범례 박스 다시 보이게
+    wmsLegendVisible.value = true
+
     if (wmsOverlay) {
       wmsOverlay.setMap(map)
     } else if (map) {
@@ -604,294 +617,24 @@ function escapeHtml(str) {
 }
 </script>
 
-<!--<template>
-  <q-page class="q-pa-md bg-white">
-    <div class="column q-gutter-md">
-
-      &lt;!&ndash; 상단 검색 카드 &ndash;&gt;
-      <q-card flat bordered>
-        <q-card-section>
-          <div class="row items-center q-col-gutter-sm justify-between">
-
-            &lt;!&ndash; 주소 입력 &ndash;&gt;
-            <div class="col-12 col-md-12 no-wrap">
-              <q-input
-                  v-model="address"
-                  dense
-                  outlined
-                  clearable
-                  label="주변 모범음식점 검색"
-                  placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
-                  @keyup.enter="handleSearch"
-                  style="width: 100%"
-              >
-                <template #prepend>
-                  <q-icon name="place"/>
-                </template>
-              </q-input>
-            </div>
-
-            &lt;!&ndash; 버튼 및 선택 박스 &ndash;&gt;
-            <div class="col-12 col-md-12 row items-center justify-between">
-              <q-btn
-                  color="primary"
-                  dense
-                  icon="search"
-                  label="검색"
-                  class="col-6 col-md-3"
-                  @click="handleSearch"
-              />
-              <q-btn
-                  color="secondary"
-                  dense icon="my_location"
-                  label="현재위치"
-                  class="col-6 col-md-3"
-                  @click="handleCurrentLocation"/>
-              <q-select
-                  v-model="radius"
-                  :options="radiusOptions"
-                  dense
-                  outlined
-                  emit-value
-                  map-options
-                  label="반경"
-                  class="col-6 col-md-3 q-gutter-md"
-              />
-              <q-select
-                  v-model="limit"
-                  :options="limitOptions"
-                  dense
-                  outlined
-                  emit-value
-                  map-options
-                  label="개수"
-                  class="col-6 col-md-3 q-gutter-md"/>
-            </div>
-          </div>
-        </q-card-section>
-      </q-card>
-
-      &lt;!&ndash; 지도 카드 &ndash;&gt;
-      <q-card flat bordered>
-        <q-card-section class="q-pa-none">
-          <div class="relative-position" style="width: 100%; height: 70vh;">
-            <div id="map" style="width: 100%; height: 100%;"></div>
-
-            &lt;!&ndash; 로딩 스피너 &ndash;&gt;
-            <q-inner-loading :showing="loading">
-              <q-spinner size="42px"/>
-              <div class="q-mt-sm">지도를 불러오는 중...</div>
-            </q-inner-loading>
-          </div>
-        </q-card-section>
-      </q-card>
-
-    </div>
-  </q-page>
-</template>
-
-<script setup>
-import {getNearbyRestaurants, getRestaurantsByLocation} from '@/api/restaurantApi'
-import {useQuasar} from 'quasar'
-import {onMounted, ref} from 'vue'
-import Map from 'ol/Map'
-import View from 'ol/View'
-import TileLayer from 'ol/layer/Tile'
-import XYZ from 'ol/source/XYZ'
-import ImageLayer from 'ol/layer/Image'
-import ImageWMS from 'ol/source/ImageWMS'
-import VectorLayer from 'ol/layer/Vector'
-import VectorSource from 'ol/source/Vector'
-import Feature from 'ol/Feature'
-import Point from 'ol/geom/Point'
-import {Icon, Style} from 'ol/style'
-import Overlay from 'ol/Overlay'
-import {fromLonLat} from 'ol/proj'
-
-const $q = useQuasar()
-const loading = ref(true)
-
-// 검색 상태
-const address = ref('')
-const radius = ref(0.1)
-const limit = ref(20)
-const radiusOptions = [
-  {label: '100m', value: 0.1},
-  {label: '300m', value: 0.3},
-  {label: '500m', value: 0.5},
-  {label: '1km', value: 1.0}
-]
-const limitOptions = [
-  {label: '10개', value: 10},
-  {label: '20개', value: 20},
-  {label: '30개', value: 30},
-  {label: '50개', value: 50},
-  {label: '100개', value: 100}
-]
-
-// 지도 상태
-let map = null
-let markerLayer = null
-let popupOverlay = null
-
-onMounted(() => {
-  initMap()
-  loading.value = false
-})
-
-function initMap() {
-  // 1) 기본 지도
-  const baseLayer = new TileLayer({
-    source: new XYZ({
-      url: 'https://api.vworld.kr/req/wmts/1.0.0/3ABE0F93-6B61-33E6-9B60-2122EB5FC9E0/Base/{z}/{y}/{x}.png'
-    })
-  })
-
-  // 2) WMS 레이어
-  const wmsLayer = new ImageLayer({
-    source: new ImageWMS({
-      url: 'https://geoserver.i4624.info/geoserver/test_geoserver/wms',
-      params: {
-        LAYERS: 'test_geoserver:seoul_group',
-        FORMAT: 'image/png',
-        TRANSPARENT: true,
-        SRS: 'EPSG:3857'
-      },
-      serverType: 'geoserver',
-      crossOrigin: 'anonymous'
-    }),
-    opacity: 0.6
-  })
-
-  // 3) 마커 레이어
-  markerLayer = new VectorLayer({
-    source: new VectorSource()
-  })
-
-  // 4) Map 생성
-  map = new Map({
-    target: 'map',
-    layers: [baseLayer, wmsLayer, markerLayer],
-    view: new View({
-      center: fromLonLat([126.9780, 37.5665]),
-      zoom: 13,
-      minZoom: 7,
-      maxZoom: 19
-    })
-  })
-
-  // 5) 팝업 Overlay
-  const popupEl = document.createElement('div')
-  popupEl.style.background = 'white'
-  popupEl.style.padding = '8px'
-  popupEl.style.borderRadius = '4px'
-  popupEl.style.border = '1px solid #333'
-
-  popupOverlay = new Overlay({
-    element: popupEl,
-    positioning: 'bottom-center',
-    stopEvent: false,
-    offset: [0, -10]
-  })
-  map.addOverlay(popupOverlay)
-
-  map.on('singleclick', (evt) => {
-    map.forEachFeatureAtPixel(evt.pixel, (feature) => {
-      const props = feature.getProperties()
-      if (props.name) {
-        popupEl.innerHTML = `<strong>${props.name}</strong><br>${props.address || ''}`
-        popupOverlay.setPosition(evt.coordinate)
-      }
-    })
-  })
+<style scoped>
+.wms-legend-box {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  max-width: 260px;
+  max-height: 260px;
+  overflow: auto;
+  box-sizing: border-box;
 }
 
-// 마커 초기화
-function clearMarkers() {
-  markerLayer.getSource().clear()
+.wms-legend-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
 }
-
-// 마커 추가
-function addMarker(lon, lat, name, address) {
-  const feature = new Feature({
-    geometry: new Point(fromLonLat([lon, lat])),
-    name,
-    address
-  })
-  feature.setStyle(new Style({
-    image: new Icon({
-      src: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-      scale: 0.05
-    })
-  }))
-  markerLayer.getSource().addFeature(feature)
-}
-
-// 현재 위치 가져오기
-function getCurrentLocation() {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) return reject('브라우저에서 위치 정보 지원 불가')
-    navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({lat: pos.coords.latitude, lon: pos.coords.longitude}),
-        (err) => reject(err),
-        {enableHighAccuracy: true, timeout: 10000, maximumAge: 0}
-    )
-  })
-}
-
-// 현재 위치 버튼
-async function handleCurrentLocation() {
-  loading.value = true
-  try {
-    const loc = await getCurrentLocation()
-    map.getView().setCenter(fromLonLat([loc.lon, loc.lat]))
-    map.getView().setZoom(15)
-    addMarker(loc.lon, loc.lat, '현재 위치')
-    const radiusInMeters = (radius.value || 0.1) * 1000
-    const res = await getRestaurantsByLocation({
-      lat: loc.lat,
-      lon: loc.lon,
-      radius: radiusInMeters,
-      limit: limit.value || 20
-    })
-    updateMapWithRestaurants(res)
-    $q.notify({type: 'positive', message: '현재 위치 기준으로 주변 식당 검색 완료'})
-  } catch (e) {
-    console.error(e)
-    $q.notify({type: 'negative', message: '현재 위치 검색 실패'})
-  } finally {
-    loading.value = false
-  }
-}
-
-// 주소 검색
-async function handleSearch() {
-  const addr = address.value.trim()
-  if (!addr) return $q.notify({type: 'warning', message: '주소를 입력해주세요.'})
-  loading.value = true
-  try {
-    const res = await getNearbyRestaurants({
-      address: addr,
-      radius: radius.value || 0.1,
-      limit: limit.value || 20
-    })
-    updateMapWithRestaurants(res)
-  } catch (e) {
-    console.error(e)
-    $q.notify({type: 'negative', message: '주변 식당 조회 실패'})
-  } finally {
-    loading.value = false
-  }
-}
-
-// 지도에 식당 표시
-function updateMapWithRestaurants(list) {
-  clearMarkers()
-  const valid = list.filter(it => Number.isFinite(it?.lat) && Number.isFinite(it?.lon))
-  if (!valid.length) return $q.notify({type: 'info', message: '좌표 정보가 있는 가게가 없습니다.'})
-  const center = valid[0]
-  map.getView().setCenter(fromLonLat([center.lon, center.lat]))
-  map.getView().setZoom(15)
-  valid.forEach(r => addMarker(r.lon, r.lat, r.restaurantName || '', r.address || ''))
-}
-</script>-->
+</style>
