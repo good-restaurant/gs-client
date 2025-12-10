@@ -208,6 +208,10 @@ export async function searchCity(q, limit = 20) {
 export async function searchTown(q, limit = 20) {
     return httpRequest('/address-list/search/town', { params: { q, limit } });
 }
+/** 시/구 기반 동/읍/면 목록 조회 */
+export async function getTownListByCity(city) {
+    return httpRequest('/address-list/searchlist/town', { params: { city } });
+}
 /** 시도/시군구/읍면동 조합 조회 */
 export async function getRestaurantsByAddress({ province, city, town, limit = 100 }) {
     return httpRequest('/v3/restaurant/address', { params: { province, city, town, limit } });
