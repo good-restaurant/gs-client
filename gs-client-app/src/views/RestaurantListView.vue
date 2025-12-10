@@ -59,7 +59,7 @@
             clearable @filter="filterCity" @update:model-value="onCityChange" />
 
           <!-- 동/읍/면(Town/EMD) -->
-          <q-select class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedTown"
+          <q-select ref="townSelectRef" class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedTown"
             :options="townOptions" :loading="addrLoading" label="동/읍/면" hint="예) 역삼1동" :disable="!selectedCity"
             clearable @filter="filterTown" @update:model-value="onTownChange" />
 
@@ -135,18 +135,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
 import {
-  listRandomRestaurants,
-  searchRestaurants,
-  searchProvince,
-  searchCity,
-  searchTown,
   getRestaurantsByAddress,
-  getRestaurantsByEmd,
+  getTownListByCity,
+  listRandomRestaurants,
+  searchCity,
+  searchProvince,
+  searchRestaurants,
+  searchTown
 } from '@/api/restaurantApi'
+import { useQuasar } from 'quasar'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 // 카테고리 정의
 const CATEGORY_LABEL_MAP = {
@@ -391,6 +391,8 @@ const provinceOptions = ref([]);
 const cityOptions = ref([]);
 const townOptions = ref([]);
 
+const townSelectRef = ref(null);
+
 // 주소 필터 적용 버튼 활성/비활성
 const addrApplyDisabled = computed(() => {
   // 시/도만 선택해도 적용 가능(광역 단위 조회), 시/구만 선택도 가능
@@ -418,9 +420,34 @@ async function filterCity(val, update) {
 
 async function filterTown(val, update) {
   if (!selectedCity.value) { update(() => (townOptions.value = [])); return; }
-  if (!val) { update(() => (townOptions.value = [])); return; }
+  
+  // 빈 값일 때는 시/구 기반 목록을 보여줌 (시/구 선택 직후 자동 로드용)
+  if (!val || val.trim() === '') {
+    addrLoading.value = true;
+    try {
+      const list = await getTownListByCity(selectedCity.value);
+      update(() => { townOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
+    } catch (e) {
+      update(() => { townOptions.value = []; });
+    } finally {
+      addrLoading.value = false;
+    }
+    return;
+  }
+  
   addrLoading.value = true;
-  const list = await searchTown(val, 20);
+  
+  // 1글자일 때는 시/구 기반 목록 조회, 2글자 이상일 때는 검색 API 사용
+  const trimmedVal = val.trim();
+  let list;
+  if (trimmedVal.length === 1) {
+    // 1글자일 때: 시/구 기반 목록 조회
+    list = await getTownListByCity(selectedCity.value);
+  } else {
+    // 2글자 이상일 때: 기존 검색 API 사용
+    list = await searchTown(val, 20);
+  }
+  
   update(() => { townOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
   addrLoading.value = false;
 }
@@ -433,9 +460,62 @@ function onProvinceChange() {
   cityOptions.value = [];
   townOptions.value = [];
 }
-function onCityChange() {
+async function onCityChange() {
   selectedTown.value = null;
   townOptions.value = [];
+  
+  // 시/구가 선택되면 동/읍/면 목록을 자동으로 로드하고 포커스 이동
+  if (selectedCity.value) {
+    // 먼저 목록을 로드
+    addrLoading.value = true;
+    try {
+      const list = await getTownListByCity(selectedCity.value);
+      townOptions.value = Array.isArray(list) ? list : (list?.data ?? []);
+    } catch (e) {
+      console.error('동/읍/면 목록 조회 실패:', e);
+      townOptions.value = [];
+    } finally {
+      addrLoading.value = false;
+    }
+    
+    // DOM 업데이트 후 포커스 이동 및 드롭다운 열기
+    await nextTick();
+    setTimeout(() => {
+      if (townSelectRef.value) {
+        const selectEl = townSelectRef.value.$el;
+        if (selectEl) {
+          const input = selectEl.querySelector('input');
+          if (input) {
+            // 포커스 설정
+            input.focus();
+            
+            // 실제로 한 글자를 입력하여 필터 트리거하고 드롭다운 열기
+            // ' ' (공백)을 입력하면 filterTown이 호출되고 목록이 표시됨
+            input.value = ' ';
+            
+            // 여러 이벤트를 발생시켜 q-select가 인식하도록
+            const events = [
+              new Event('input', { bubbles: true, cancelable: true }),
+              new Event('keydown', { bubbles: true, cancelable: true }),
+              new Event('keyup', { bubbles: true, cancelable: true }),
+              new MouseEvent('click', { bubbles: true, cancelable: true })
+            ];
+            
+            events.forEach(event => {
+              input.dispatchEvent(event);
+            });
+            
+            // 약간의 지연 후 입력값을 지워서 사용자가 선택할 수 있도록
+            setTimeout(() => {
+              input.value = '';
+              const clearEvent = new Event('input', { bubbles: true, cancelable: true });
+              input.dispatchEvent(clearEvent);
+            }, 200);
+          }
+        }
+      }
+    }, 150);
+  }
 }
 function onTownChange() {
   // 동이 확정되면 바로 적용하고 싶다면 여기서 applyAddressFilter() 호출 가능
@@ -446,27 +526,33 @@ async function applyAddressFilter() {
   try {
     loading.value = true;
 
-    // 1차: 시/도 + 시/구 기준으로 서버에서 목록 조회
+    // 동/읍/면이 선택되어 있으면 서버에 town 파라미터 전달
+    const townValue = selectedTown.value ? selectedTown.value.trim() : undefined;
+
+    // city 값 처리: "부천시 소사구" 같은 경우를 파싱
+    // DB의 sig_kor_nm 컬럼에는 "부천시" 또는 "소사구"로만 저장되어 있을 가능성이 높음
+    // "부천시 소사구" -> "부천시"만 추출하여 전달
+    let cityValue = selectedCity.value ? selectedCity.value.trim() : undefined;
+    
+    if (cityValue) {
+      // "부천시 소사구" -> "부천시"만 추출
+      // "서울특별시 강남구" -> "서울특별시"만 추출
+      // "세종특별자치시" -> "세종특별자치시" 그대로 유지
+      const cityMatch = cityValue.match(/^(.+?시)(?:\s+.+구)?$/);
+      if (cityMatch) {
+        cityValue = cityMatch[1]; // "부천시" 또는 "서울특별시"만 추출
+      }
+    }
+
+    // 시/도 + 시/구 + 동/읍/면 기준으로 서버에서 목록 조회
     const res = await getRestaurantsByAddress({
       province: selectedProvince.value ?? undefined,
-      city: selectedCity.value ?? undefined,
-      town: undefined,
+      city: cityValue,
+      town: townValue,
       limit: 300, // 필요하면 조정
     });
 
-    const baseList = Array.isArray(res) ? res : (res?.data ?? []);
-
-    // 2차: 동/읍/면이 입력돼 있으면 클라이언트에서 한 번 더 필터링
-    const townKeyword = (selectedTown.value || '').trim();
-
-    const list = townKeyword
-      ? baseList.filter((item) => {
-        const emd = String(item.emdKorNm ?? '');
-        const addr = String(item.address ?? '');
-        // emd 컬럼 우선, 없으면 주소 문자열에서 포함 여부 확인
-        return emd.includes(townKeyword) || addr.includes(townKeyword);
-      })
-      : baseList;
+    const list = Array.isArray(res) ? res : (res?.data ?? []);
 
     rows.value = list;
     // 이름/주소/카테고리 검색어는 초기화 (주소 필터만 적용)
