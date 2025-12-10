@@ -451,7 +451,23 @@ async function filterCity(val, update) {
 }
 
 async function filterTown(val, update) {
-  if (!val) { update(() => (townOptions.value = [])); return; }
+  if (!val) { 
+    // 빈 값일 때: 시/구가 선택되어 있으면 시/구 기반 목록 표시, 없으면 빈 배열
+    if (selectedCity.value) {
+      addrLoading.value = true;
+      try {
+        const list = await getTownListByCity(selectedCity.value);
+        update(() => { townOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
+      } catch (e) {
+        update(() => { townOptions.value = []; });
+      } finally {
+        addrLoading.value = false;
+      }
+    } else {
+      update(() => { townOptions.value = []; });
+    }
+    return; 
+  }
   
   addrLoading.value = true;
   
