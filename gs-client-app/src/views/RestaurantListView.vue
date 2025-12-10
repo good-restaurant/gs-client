@@ -54,14 +54,47 @@
             @filter="filterProvince" @update:model-value="onProvinceChange" />
 
           <!-- 시/구(City) -->
-          <q-select class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedCity"
-            :options="cityOptions" :loading="addrLoading" label="시/구" hint="예) 강남구" :disable="!selectedProvince"
-            clearable @filter="filterCity" @update:model-value="onCityChange" />
+          <div class="col-12 col-md-3">
+            <q-select dense outlined use-input input-debounce="200" v-model="selectedCity"
+              :options="cityOptions" :loading="addrLoading" label="시/구" hint="예) 강남구"
+              clearable @filter="filterCity" @update:model-value="onCityChange">
+              <template #prepend>
+                <q-icon name="info" color="grey-6" size="sm">
+                  <q-tooltip class="bg-grey-9" :offset="[0, 8]">
+                    <div class="text-body2" style="max-width: 300px; white-space: normal;">
+                      <div class="text-weight-bold q-mb-xs">구 단위 주소 조회 안내</div>
+                      <div class="text-body2">
+                        • "부천시 소사구"와 같이 시와 구가 함께 표시되는 경우<br/>
+                        &nbsp;&nbsp;데이터에는 "부천시"만 저장되어 있어 시 단위로 검색됩니다.<br/>
+                        • 서울특별시와 같은 광역 자치시의 경우 구 단위로 검색됩니다.<br/>
+                      </div>
+                    </div>
+                  </q-tooltip>
+                </q-icon>
+              </template>
+            </q-select>
+          </div>
 
           <!-- 동/읍/면(Town/EMD) -->
-          <q-select ref="townSelectRef" class="col-12 col-md-3" dense outlined use-input input-debounce="200" v-model="selectedTown"
-            :options="townOptions" :loading="addrLoading" label="동/읍/면" hint="예) 역삼1동" :disable="!selectedCity"
-            clearable @filter="filterTown" @update:model-value="onTownChange" />
+          <div class="col-12 col-md-3">
+            <q-select ref="townSelectRef" dense outlined use-input input-debounce="200" v-model="selectedTown"
+              :options="townOptions" :loading="addrLoading" label="동/읍/면" hint="예) 역삼1동"
+              clearable @filter="filterTown" @update:model-value="onTownChange">
+              <template #prepend>
+                <q-icon name="info" color="grey-6" size="sm">
+                  <q-tooltip class="bg-grey-9" :offset="[0, 8]">
+                    <div class="text-body2" style="max-width: 300px; white-space: normal;">
+                      <div class="text-weight-bold q-mb-xs">동/읍/면 단위 검색 안내</div>
+                      <div class="text-body2">
+                        • 해당 동/읍/면에 해당되는 가게가 없으면<br/>
+                        &nbsp;&nbsp;임의의 결과가 반환됩니다.
+                      </div>
+                    </div>
+                  </q-tooltip>
+                </q-icon>
+              </template>
+            </q-select>
+          </div>
 
           <!-- 적용 버튼 (기존 흐름 보존, 최소 변경) -->
           <div class="col-auto q-ml-sm">
@@ -410,7 +443,6 @@ async function filterProvince(val, update) {
 }
 
 async function filterCity(val, update) {
-  if (!selectedProvince.value) { update(() => (cityOptions.value = [])); return; }
   if (!val) { update(() => (cityOptions.value = [])); return; }
   addrLoading.value = true;
   const list = await searchCity(val, 20);
@@ -419,32 +451,18 @@ async function filterCity(val, update) {
 }
 
 async function filterTown(val, update) {
-  if (!selectedCity.value) { update(() => (townOptions.value = [])); return; }
-  
-  // 빈 값일 때는 시/구 기반 목록을 보여줌 (시/구 선택 직후 자동 로드용)
-  if (!val || val.trim() === '') {
-    addrLoading.value = true;
-    try {
-      const list = await getTownListByCity(selectedCity.value);
-      update(() => { townOptions.value = Array.isArray(list) ? list : (list?.data ?? []); });
-    } catch (e) {
-      update(() => { townOptions.value = []; });
-    } finally {
-      addrLoading.value = false;
-    }
-    return;
-  }
+  if (!val) { update(() => (townOptions.value = [])); return; }
   
   addrLoading.value = true;
   
-  // 1글자일 때는 시/구 기반 목록 조회, 2글자 이상일 때는 검색 API 사용
+  // 시/구가 선택되어 있고 1글자일 때는 시/구 기반 목록 조회, 그 외에는 검색 API 사용
   const trimmedVal = val.trim();
   let list;
-  if (trimmedVal.length === 1) {
-    // 1글자일 때: 시/구 기반 목록 조회
+  if (selectedCity.value && trimmedVal.length === 1) {
+    // 시/구가 선택되어 있고 1글자일 때: 시/구 기반 목록 조회
     list = await getTownListByCity(selectedCity.value);
   } else {
-    // 2글자 이상일 때: 기존 검색 API 사용
+    // 그 외: 기존 검색 API 사용
     list = await searchTown(val, 20);
   }
   
