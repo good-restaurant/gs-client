@@ -17,9 +17,13 @@ export async function deleteComment(id: number) {
   return res.data
 }
 
-export async function getRestaurantComments(restaurantId: number, page = 0, size = 10) {
+export async function getRestaurantComments(restaurantId: number, page = 0, size = 10, sort?: string) {
+  const params: { page: number; size: number; sort?: string } = { page, size }
+  if (sort) {
+    params.sort = sort
+  }
   const res = await api.get(`/restaurant-comment/view/${restaurantId}`, {
-    params: { page, size },
+    params,
   })
   return res.data
 }
