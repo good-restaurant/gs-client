@@ -20,7 +20,7 @@
                 :options="addressOptions"
                 :loading="addressLoading"
                 label="주변 모범음식점 검색"
-                placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
+                placeholder="도로명 주소를 입력하세요 (예: 세종대로4길)"
                 clearable
                 hide-selected
                 @filter="filterAddress"
@@ -153,7 +153,10 @@ const radiusOptions = [
   { label: '100m', value: 0.1 },
   { label: '300m', value: 0.3 },
   { label: '500m', value: 0.5 },
-  { label: '1km', value: 1.0 }
+  { label: '1km', value: 1.0 },
+  { label: '3km', value: 3.0 },
+  { label: '5km', value: 5.0 },
+  { label: '10km', value: 10.0 }
 ]
 
 // 개수 제한 옵션
