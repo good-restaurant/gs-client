@@ -10,12 +10,28 @@
 
             <!--도로명 주소 입력-->
             <div class="col-12 col-md-12 no-wrap">
-              <q-input v-model="address" dense outlined clearable label="주변 모범음식점 검색"
-                placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)" @keyup.enter="handleSearch" style="width: 100%">
+              <q-select
+                v-model="address"
+                dense
+                outlined
+                use-input
+                fill-input
+                input-debounce="200"
+                :options="addressOptions"
+                :loading="addressLoading"
+                label="주변 모범음식점 검색"
+                placeholder="도로명 주소를 입력하세요 (예: 서울특별시 중구 세종대로 110)"
+                clearable
+                hide-selected
+                @filter="filterAddress"
+                @update:model-value="onAddressSelect"
+                @keyup.enter="handleSearch"
+                style="width: 100%"
+              >
                 <template #prepend>
                   <q-icon name="place" />
                 </template>
-              </q-input>
+              </q-select>
             </div>
 
             <!--버튼 및 선택 박스 영역-->
@@ -112,7 +128,7 @@
 </template>
 
 <script setup>
-import { getNearbyRestaurants, getRestaurantsByLocation } from '@/api/restaurantApi'
+import { getNearbyRestaurants, getRestaurantsByLocation, searchRoad } from '@/api/restaurantApi'
 import { useQuasar } from 'quasar'
 import { onMounted, ref } from 'vue'
 
@@ -127,6 +143,10 @@ const legendVisible = ref(false) // 범례 표시 여부
 const address = ref('')
 const radius = ref(0.1) // km 단위라고 가정(백엔드 기본값과 동일)
 const limit = ref(20) // 기본 표시 개수
+
+// 주소 자동완성 상태
+const addressOptions = ref([])
+const addressLoading = ref(false)
 
 // 반경 선택 옵션
 const radiusOptions = [
@@ -592,6 +612,37 @@ async function handleCurrentLocation() {
   } finally {
     loading.value = false
   }
+}
+
+// 주소 자동완성 필터
+async function filterAddress(val, update) {
+  if (!val) {
+    update(() => {
+      addressOptions.value = []
+    })
+    return
+  }
+  
+  addressLoading.value = true
+  try {
+    const list = await searchRoad(val, 20)
+    update(() => {
+      addressOptions.value = Array.isArray(list) ? list : (list?.data ?? [])
+    })
+  } catch (e) {
+    console.error('주소 검색 실패:', e)
+    update(() => {
+      addressOptions.value = []
+    })
+  } finally {
+    addressLoading.value = false
+  }
+}
+
+// 주소 선택 시 처리
+function onAddressSelect() {
+  // 주소가 선택되면 자동으로 검색하지 않고, 사용자가 검색 버튼을 누를 때까지 대기
+  // 필요하면 여기서 자동 검색도 가능
 }
 
 // 주소 기반 주변 검색 호출

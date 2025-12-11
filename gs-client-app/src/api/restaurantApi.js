@@ -216,3 +216,7 @@ export async function getTownListByCity(city) {
 export async function getRestaurantsByAddress({ province, city, town, limit = 100 }) {
     return httpRequest('/v3/restaurant/address', { params: { province, city, town, limit } });
 }
+/** 도로명 검색 (LIKE 기반) */
+export async function searchRoad(q, limit = 20) {
+    return httpRequest('/address-list/search/road', { params: { q, limit } });
+}
