@@ -131,11 +131,12 @@ async function reload() {
     loading.value = true;
     try {
         // 백엔드가 Page를 반환하지 않는 경우를 고려: 배열만 와도 처리
-        const res = await getRestaurantComments(props.restaurantId, {
-            page: page.value - 1,
-            size: size.value,
-            sort: sort.value,
-        });
+        const res = await getRestaurantComments(
+            props.restaurantId,
+            page.value - 1,
+            size.value,
+            sort.value
+        );
 
         const list = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
         comments.value = list;
@@ -168,12 +169,18 @@ async function onSubmit() {
             // Admin 모드일 때는 admin API 사용
             if (props.admin) {
                 await adminUpdateComment(editId.value, {
+                    restaurant: {
+                        id: props.restaurantId,
+                    },
                     content: form.content.trim(),
                     rating: form.rating || 0,
                     displayName: form.displayName?.trim() || undefined,
                 });
             } else {
                 await updateComment(editId.value, {
+                    restaurant: {
+                        id: props.restaurantId,
+                    },
                     content: form.content.trim(),
                     rating: form.rating || 0,
                     displayName: form.displayName?.trim() || undefined,
@@ -186,7 +193,9 @@ async function onSubmit() {
                 return;
             }
             await createComment({
-                restaurantId: props.restaurantId,
+                restaurant: {
+                    id: props.restaurantId,
+                },
                 content: form.content.trim(),
                 rating: form.rating || 0,
                 displayName: form.displayName?.trim() || undefined,
